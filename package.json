@@ -1,8 +1,8 @@
-{
-  "name": "seishotsudoku-push",
+﻿{
+  "name": "seishokasho",
   "private": true,
-  "version": "0.0.0",
-  "description": "今日の聖書箇所を配信するPWA（React + Firebase）",
+  "version": "0.0.1",
+  "description": "PWA for daily Bible verses (React + Firebase + Supabase)",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.89.0",
     "dayjs": "^1.11.19",
     "firebase": "^12.7.0",
     "react": "^19.2.0",
