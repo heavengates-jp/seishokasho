@@ -1,6 +1,6 @@
 {
-  "name": "今日のメッセージタイトル",
-  "short_name": "メッセージ",
+  "name": "今日の聖書箇所",
+  "short_name": "聖書箇所",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0f172a",
