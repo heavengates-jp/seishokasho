@@ -24,17 +24,18 @@ const decodeEntities = (text: string) =>
 
 const formatTextPreview = (text: string) => {
   const decoded = decodeEntities(text)
+  // .bdsc のシナリオXMLを簡易パース
   if (/<scenario[\s>]/i.test(decoded)) {
-    const sceneRegex = /<scene[^>]*?PositionText="([^"]*)"[^>]*?YakuText="([^"]*)"[^>]*?>/gi
-    const lines: string[] = []
-    let m: RegExpExecArray | null
-    while ((m = sceneRegex.exec(decoded)) !== null) {
-      const pos = m[1].trim()
-      const yaku = m[2].trim()
-      if (pos) lines.push(pos)
-      if (yaku) lines.push(yaku)
-    }
-    if (lines.length > 0) {
+    const dom = new DOMParser().parseFromString(decoded, 'text/xml')
+    const scenes = Array.from(dom.getElementsByTagName('scene'))
+    const lines = scenes
+      .map((scene) => {
+        const pos = scene.getAttribute('PositionText')?.trim() ?? ''
+        const yaku = scene.getAttribute('YakuText')?.trim() ?? ''
+        return [pos, yaku].filter(Boolean).join('\n')
+      })
+      .filter(Boolean)
+    if (lines.length) {
       return lines.join('\n')
     }
   }
@@ -57,7 +58,14 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       try {
         const res = await fetch(a.url)
         if (!res.ok) throw new Error('fetch failed')
-        const raw = await res.text()
+        const buf = await res.arrayBuffer()
+        const tryDecode = (enc: string) => new TextDecoder(enc).decode(buf)
+        let raw = ''
+        try {
+          raw = tryDecode('shift_jis')
+        } catch {
+          raw = tryDecode('utf-8')
+        }
         const formatted = formatTextPreview(raw)
         if (!cancelled) {
           setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
@@ -83,21 +91,24 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const preview = previews[a.url]
         return (
           <li key={a.url} className="attachment-item">
-            <div className="attachment-meta">
-              <span className="attachment-name">
-                {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
-              </span>
-              {a.type !== 'text' && (
+            {a.type !== 'text' && (
+              <div className="attachment-meta">
+                <span className="attachment-name">
+                  {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
+                </span>
                 <a className="chip" href={a.url} target="_blank" rel="noreferrer">
                   開く
                 </a>
-              )}
-            </div>
+              </div>
+            )}
             {a.type === 'text' && preview?.loading && (
               <p className="muted small">読み込み中...</p>
             )}
             {a.type === 'text' && preview?.text && (
-              <pre className="attachment-preview">{preview.text}</pre>
+              <pre className="attachment-preview">
+                {a.name ? `${a.name}\n\n` : ''}
+                {preview.text}
+              </pre>
             )}
             {a.type === 'text' && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
