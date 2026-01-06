@@ -81,12 +81,13 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
     let cancelled = false
     const load = async (a: Attachment) => {
       if (a.type !== 'text') return
-      if (previews[a.url]?.text || previews[a.url]?.loading) return
+      const existing = previews[a.url]
+      if (existing?.text || existing?.loading || existing?.error) return
       setPreviews((p) => ({ ...p, [a.url]: { loading: true } }))
       try {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 8000)
-        const res = await fetch(a.url, { signal: controller.signal })
+        const res = await fetch(a.url, { signal: controller.signal, cache: 'no-store' })
         clearTimeout(timer)
         if (!res.ok) throw new Error('fetch failed')
         const buf = await res.arrayBuffer()
