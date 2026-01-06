@@ -83,6 +83,10 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       if (a.type !== 'text') return
       const existing = previews[a.url]
       if (existing?.text || existing?.loading || existing?.error) return
+      if (!a.url) {
+        setPreviews((p) => ({ ...p, [a.url || crypto.randomUUID()]: { error: true } }))
+        return
+      }
       setPreviews((p) => ({ ...p, [a.url]: { loading: true } }))
       try {
         const controller = new AbortController()
