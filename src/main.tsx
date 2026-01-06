@@ -5,7 +5,8 @@ import App from './App.tsx'
 
 function AppWithSW() {
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    const enableSW = import.meta.env.VITE_ENABLE_SW === 'true'
+    if (enableSW && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register(`${import.meta.env.BASE_URL}service-worker.js`)
