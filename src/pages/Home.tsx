@@ -30,14 +30,8 @@ export default function Home() {
 
   return (
     <div className="stack page">
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">Today</p>
-          <h1>今日の聖書箇所</h1>
-        </div>
-        {status === 'loading' && <span className="pill">読み込み中</span>}
-        {status === 'error' && <span className="pill danger">オフライン表示</span>}
-      </div>
+      {status === 'loading' && <span className="pill">読み込み中</span>}
+      {status === 'error' && <span className="pill danger">オフライン表示</span>}
       {verse ? (
         <VerseCard verse={verse} />
       ) : (
