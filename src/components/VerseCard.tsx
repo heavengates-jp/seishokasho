@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import type { Verse } from '../lib/types'
-import { toBibleComLink, toPrsLink } from '../lib/utils'
 import AttachmentList from './AttachmentList'
 
 export default function VerseCard({
@@ -35,24 +34,6 @@ export default function VerseCard({
       {verse.comment && <p className="body">{verse.comment}</p>}
       <div className="stack">
         <AttachmentList attachments={attachments} />
-        <div className="link-row">
-          <a
-            className="chip"
-            href={toPrsLink(verse.reference)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            新改訳2017で開く
-          </a>
-          <a
-            className="chip"
-            href={toBibleComLink(verse.reference)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Bible.com で開く
-          </a>
-        </div>
       </div>
     </article>
   )
