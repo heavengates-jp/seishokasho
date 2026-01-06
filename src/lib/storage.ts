@@ -20,7 +20,12 @@ const typeFromName = (name: string): AttachmentType => {
   return 'other'
 }
 
-const sanitizeName = (name: string) => name.replace(/\s+/g, '-')
+const sanitizeName = (name: string) =>
+  name
+    .replace(/\s+/g, '-')
+    // 記号や全角文字を安全なハイフンに置換してキーエラーを防ぐ
+    .replace(/[^A-Za-z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
 
 async function uploadBlob(
   blob: Blob,
