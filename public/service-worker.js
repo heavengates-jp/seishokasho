@@ -1,4 +1,4 @@
-const CACHE_NAME = 'seisho-pwa-v1'
+const CACHE_NAME = 'seisho-pwa-v3'
 const BASE_PATH =
   self.location.pathname.replace(/service-worker\.js$/, '') || '/'
 const OFFLINE_URLS = [
