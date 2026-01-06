@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Attachment } from '../lib/types'
 
 const labelFor = (a: Attachment) => {
@@ -23,15 +23,17 @@ const decodeEntities = (text: string) =>
     .replace(/&#39;/g, "'")
 
 const formatTextPreview = (text: string) => {
-  // XML/HTML を含む場合にタグを除去してプレーンテキスト化
   const looksLikeXml = /<[^>]+>/.test(text)
   const stripped = looksLikeXml
     ? decodeEntities(text).replace(/<[^>]+>/g, '')
     : text
-  return stripped.replace(/\r?\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return stripped.trim()
 }
 
-type PreviewState = Record<string, { text?: string; error?: boolean }>
+type PreviewState = Record<
+  string,
+  { text?: string; error?: boolean; loading?: boolean }
+>
 
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
   const [previews, setPreviews] = useState<PreviewState>({})
@@ -39,7 +41,9 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment) => {
-      if (previews[a.url] || a.type !== 'text') return
+      if (a.type !== 'text') return
+      if (previews[a.url]?.text || previews[a.url]?.loading) return
+      setPreviews((p) => ({ ...p, [a.url]: { loading: true } }))
       try {
         const res = await fetch(a.url)
         if (!res.ok) throw new Error('fetch failed')
@@ -55,9 +59,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         }
       }
     }
-    attachments?.forEach((a) => {
-      if (a.type === 'text') load(a)
-    })
+    attachments?.forEach(load)
     return () => {
       cancelled = true
     }
@@ -75,10 +77,15 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
               <span className="attachment-name">
                 {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
               </span>
-              <a className="chip" href={a.url} target="_blank" rel="noreferrer">
-                開く
-              </a>
+              {a.type !== 'text' && (
+                <a className="chip" href={a.url} target="_blank" rel="noreferrer">
+                  開く
+                </a>
+              )}
             </div>
+            {a.type === 'text' && preview?.loading && (
+              <p className="muted small">読み込み中...</p>
+            )}
             {a.type === 'text' && preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}

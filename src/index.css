@@ -67,12 +67,15 @@ p {
   top: 0;
   z-index: 10;
   backdrop-filter: blur(10px);
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .brand {
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  flex: 1;
 }
 
 .brand-mark {
@@ -94,7 +97,6 @@ p {
 .nav {
   display: flex;
   gap: 0.5rem;
-  flex: 1;
   flex-wrap: wrap;
 }
 
@@ -118,6 +120,7 @@ p {
 .auth {
   display: flex;
   align-items: center;
+  margin-left: auto;
 }
 
 .ghost {
@@ -431,16 +434,19 @@ textarea {
 
 @media (max-width: 768px) {
   .header {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .nav {
     width: 100%;
+    justify-content: flex-start;
+    gap: 0.4rem;
   }
 
   .nav-link {
-    flex: 1;
-    text-align: center;
+    flex: 0 0 auto;
   }
 
   .card-header {

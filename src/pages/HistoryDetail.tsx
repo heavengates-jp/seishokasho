@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+﻿import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 import VerseCard from '../components/VerseCard'
 import { fetchVerseByDate } from '../lib/firestore'
 import type { Verse } from '../lib/types'
@@ -36,8 +36,13 @@ export default function HistoryDetail() {
           <p className="eyebrow">Detail</p>
           <h1>{date} の詳細</h1>
         </div>
-        {status === 'loading' && <span className="pill">更新中</span>}
-        {status === 'error' && <span className="pill danger">オフライン</span>}
+        <div className="link-row">
+          <Link className="ghost" to="/history">
+            履歴に戻る
+          </Link>
+          {status === 'loading' && <span className="pill">読み込み中</span>}
+          {status === 'error' && <span className="pill danger">エラー</span>}
+        </div>
       </div>
       {verse ? (
         <VerseCard verse={verse} />

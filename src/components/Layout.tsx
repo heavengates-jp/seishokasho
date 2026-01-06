@@ -3,12 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { logout } from '../lib/auth'
 
-const navItems = [
-  { to: '/', label: '今日' },
-  { to: '/history', label: '履歴' },
-  { to: '/admin', label: '管理' },
-]
-
 export default function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { user } = useAuth()
@@ -29,7 +23,11 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="nav">
-          {navItems.map((item) => {
+          {[
+            { to: '/', label: '今日' },
+            { to: '/history', label: '履歴' },
+            ...(pathname.startsWith('/admin') ? [{ to: '/admin', label: '管理' }] : []),
+          ].map((item) => {
             const active =
               pathname === item.to ||
               (item.to !== '/' && pathname.startsWith(item.to))
@@ -49,11 +47,11 @@ export default function Layout({ children }: { children: ReactNode }) {
             <button className="ghost" onClick={handleSignOut}>
               サインアウト
             </button>
-          ) : (
+          ) : pathname.startsWith('/admin') ? (
             <Link className="ghost" to="/admin/login">
               ログイン
             </Link>
-          )}
+          ) : null}
         </div>
       </header>
       <main className="shell">{children}</main>
