@@ -22,22 +22,22 @@ const decodeEntities = (text: string) =>
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
 
-const formatTextPreview = (text: string) => {
-  const decoded = decodeEntities(text)
-  // .bdsc のシナリオXMLを簡易パース
+const formatTextPreview = (raw: string) => {
+  const decoded = decodeEntities(raw)
+  // .bdsc（シナリオXML）をパースして本文を抽出
   if (/<scenario[\s>]/i.test(decoded)) {
     const dom = new DOMParser().parseFromString(decoded, 'text/xml')
     const scenes = Array.from(dom.getElementsByTagName('scene'))
     const lines = scenes
       .map((scene) => {
+        const version = scene.getAttribute('YakuText')?.trim() ?? ''
         const pos = scene.getAttribute('PositionText')?.trim() ?? ''
-        const yaku = scene.getAttribute('YakuText')?.trim() ?? ''
-        return [pos, yaku].filter(Boolean).join('\n')
+        const message = scene.getAttribute('MainMessage')?.trim() ?? ''
+        const header = [version, pos].filter(Boolean).join(' ')
+        return [header, message].filter(Boolean).join('\n')
       })
       .filter(Boolean)
-    if (lines.length) {
-      return lines.join('\n')
-    }
+    if (lines.length) return lines.join('\n\n')
   }
   const looksLikeXml = /<[^>]+>/.test(decoded)
   const stripped = looksLikeXml ? decoded.replace(/<[^>]+>/g, '') : decoded
@@ -59,13 +59,27 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const res = await fetch(a.url)
         if (!res.ok) throw new Error('fetch failed')
         const buf = await res.arrayBuffer()
-        const tryDecode = (enc: string) => new TextDecoder(enc).decode(buf)
-        let raw = ''
-        try {
-          raw = tryDecode('shift_jis')
-        } catch {
-          raw = tryDecode('utf-8')
+        const tryDecode = (enc: string) => {
+          try {
+            return new TextDecoder(enc).decode(buf)
+          } catch {
+            return ''
+          }
         }
+        // shift_jis と UTF-8 をスコアで選択（� が少ない方）
+        const candidates = ['shift_jis', 'windows-31j', 'utf-8']
+        let best = ''
+        let bestScore = Infinity
+        candidates.forEach((enc) => {
+          const text = tryDecode(enc)
+          if (!text) return
+          const score = (text.match(/\uFFFD/g) || []).length
+          if (score < bestScore) {
+            best = text
+            bestScore = score
+          }
+        })
+        const raw = best || tryDecode('utf-8')
         const formatted = formatTextPreview(raw)
         if (!cancelled) {
           setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
@@ -105,10 +119,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
               <p className="muted small">読み込み中...</p>
             )}
             {a.type === 'text' && preview?.text && (
-              <pre className="attachment-preview">
-                {a.name ? `${a.name}\n\n` : ''}
-                {preview.text}
-              </pre>
+              <pre className="attachment-preview">{preview.text}</pre>
             )}
             {a.type === 'text' && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
