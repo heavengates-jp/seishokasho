@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import type { Attachment } from '../lib/types'
 
 const labelFor = (a: Attachment) => {
@@ -14,6 +14,23 @@ const labelFor = (a: Attachment) => {
   }
 }
 
+const decodeEntities = (text: string) =>
+  text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+
+const formatTextPreview = (text: string) => {
+  // XML/HTML を含む場合にタグを除去してプレーンテキスト化
+  const looksLikeXml = /<[^>]+>/.test(text)
+  const stripped = looksLikeXml
+    ? decodeEntities(text).replace(/<[^>]+>/g, '')
+    : text
+  return stripped.replace(/\r?\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 type PreviewState = Record<string, { text?: string; error?: boolean }>
 
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
@@ -26,9 +43,10 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       try {
         const res = await fetch(a.url)
         if (!res.ok) throw new Error('fetch failed')
-        const text = await res.text()
+        const raw = await res.text()
+        const formatted = formatTextPreview(raw)
         if (!cancelled) {
-          setPreviews((p) => ({ ...p, [a.url]: { text } }))
+          setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
         }
       } catch (e) {
         console.error('text preview failed', e)
