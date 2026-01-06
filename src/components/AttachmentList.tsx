@@ -108,9 +108,13 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
           }
         })
         const raw = best || tryDecode('utf-8')
-        const formatted = formatTextPreview(raw)
+        const formatted = formatTextPreview(raw).trim()
         if (!cancelled) {
-          setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
+          if (formatted) {
+            setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
+          } else {
+            setPreviews((p) => ({ ...p, [a.url]: { error: true } }))
+          }
         }
       } catch (e) {
         console.error('text preview failed', e)
