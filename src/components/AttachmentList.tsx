@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import type { Attachment } from '../lib/types'
 
 const labelFor = (a: Attachment) => {
@@ -23,17 +23,27 @@ const decodeEntities = (text: string) =>
     .replace(/&#39;/g, "'")
 
 const formatTextPreview = (text: string) => {
-  const looksLikeXml = /<[^>]+>/.test(text)
-  const stripped = looksLikeXml
-    ? decodeEntities(text).replace(/<[^>]+>/g, '')
-    : text
+  const decoded = decodeEntities(text)
+  if (/<scenario[\s>]/i.test(decoded)) {
+    const sceneRegex = /<scene[^>]*?PositionText="([^"]*)"[^>]*?YakuText="([^"]*)"[^>]*?>/gi
+    const lines: string[] = []
+    let m: RegExpExecArray | null
+    while ((m = sceneRegex.exec(decoded)) !== null) {
+      const pos = m[1].trim()
+      const yaku = m[2].trim()
+      if (pos) lines.push(pos)
+      if (yaku) lines.push(yaku)
+    }
+    if (lines.length > 0) {
+      return lines.join('\n')
+    }
+  }
+  const looksLikeXml = /<[^>]+>/.test(decoded)
+  const stripped = looksLikeXml ? decoded.replace(/<[^>]+>/g, '') : decoded
   return stripped.trim()
 }
 
-type PreviewState = Record<
-  string,
-  { text?: string; error?: boolean; loading?: boolean }
->
+type PreviewState = Record<string, { text?: string; error?: boolean; loading?: boolean }>
 
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
   const [previews, setPreviews] = useState<PreviewState>({})
