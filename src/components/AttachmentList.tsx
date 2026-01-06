@@ -79,15 +79,15 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
 
   useEffect(() => {
     let cancelled = false
-    const load = async (a: Attachment) => {
+    const load = async (a: Attachment, key: string) => {
       if (a.type !== 'text') return
-      const existing = previews[a.url]
+      const existing = previews[key]
       if (existing?.text || existing?.loading || existing?.error) return
       if (!a.url) {
-        setPreviews((p) => ({ ...p, [a.url || crypto.randomUUID()]: { error: true } }))
+        setPreviews((p) => ({ ...p, [key]: { error: true } }))
         return
       }
-      setPreviews((p) => ({ ...p, [a.url]: { loading: true } }))
+      setPreviews((p) => ({ ...p, [key]: { loading: true } }))
       try {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 8000)
@@ -119,19 +119,22 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const formatted = formatTextPreview(raw).trim()
         if (!cancelled) {
           if (formatted) {
-            setPreviews((p) => ({ ...p, [a.url]: { text: formatted } }))
+            setPreviews((p) => ({ ...p, [key]: { text: formatted } }))
           } else {
-            setPreviews((p) => ({ ...p, [a.url]: { error: true } }))
+            setPreviews((p) => ({ ...p, [key]: { error: true } }))
           }
         }
       } catch (e) {
         console.error('text preview failed', e)
         if (!cancelled) {
-          setPreviews((p) => ({ ...p, [a.url]: { error: true } }))
+          setPreviews((p) => ({ ...p, [key]: { error: true } }))
         }
       }
     }
-    attachments?.forEach(load)
+    attachments?.forEach((a, idx) => {
+      const key = a.url || `missing-${idx}`
+      load(a, key)
+    })
     return () => {
       cancelled = true
     }
@@ -141,10 +144,11 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
 
   return (
     <ul className="attachment-list">
-      {attachments.map((a) => {
-        const preview = previews[a.url]
+      {attachments.map((a, idx) => {
+        const key = a.url || `missing-${idx}`
+        const preview = previews[key]
         return (
-          <li key={a.url} className="attachment-item">
+          <li key={key} className="attachment-item">
             {a.type !== 'text' && (
               <div className="attachment-meta">
                 <span className="attachment-name">
@@ -154,6 +158,9 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                   開く
                 </a>
               </div>
+            )}
+            {a.type === 'text' && !a.url && (
+              <p className="muted small">プレビューを読み込めませんでした</p>
             )}
             {a.type === 'text' && preview?.loading && (
               <p className="muted small">読み込み中...</p>
