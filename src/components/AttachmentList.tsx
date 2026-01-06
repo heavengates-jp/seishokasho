@@ -24,21 +24,49 @@ const decodeEntities = (text: string) =>
 
 const formatTextPreview = (raw: string) => {
   const decoded = decodeEntities(raw)
+
+  const parsePos = (pos: string) => {
+    // 例: "創世記 44:14"
+    const m = pos.match(/^(.+?)\\s+(\\d+):?(\\d+)?$/)
+    if (!m) return null
+    const [, book, chapter, verse] = m
+    return { book: book.trim(), chapter: chapter.trim(), verse: verse?.trim() ?? '' }
+  }
+
   // .bdsc（シナリオXML）をパースして本文を抽出
   if (/<scenario[\s>]/i.test(decoded)) {
     const dom = new DOMParser().parseFromString(decoded, 'text/xml')
-    const scenes = Array.from(dom.getElementsByTagName('scene'))
-    const lines = scenes
-      .map((scene) => {
-        const version = scene.getAttribute('YakuText')?.trim() ?? ''
-        const pos = scene.getAttribute('PositionText')?.trim() ?? ''
-        const message = scene.getAttribute('MainMessage')?.trim() ?? ''
-        const header = [version, pos].filter(Boolean).join(' ')
-        return [header, message].filter(Boolean).join('\n')
+    const scenes = Array.from(dom.getElementsByTagName('scene')).map((scene) => ({
+      version: scene.getAttribute('YakuText')?.trim() ?? '',
+      pos: parsePos(scene.getAttribute('PositionText')?.trim() ?? ''),
+      message: scene.getAttribute('MainMessage')?.trim() ?? '',
+    }))
+
+    // 書名＋章ごとにまとめ、節は連続で表示
+    const groups: Record<string, { book: string; chapter: string; version?: string; verses: { v: string; text: string }[] }> = {}
+    scenes.forEach((s) => {
+      if (!s.pos) return
+      const key = `${s.pos.book}-${s.pos.chapter}`
+      if (!groups[key]) {
+        groups[key] = { book: s.pos.book, chapter: s.pos.chapter, version: s.version, verses: [] }
+      }
+      groups[key].verses.push({ v: s.pos.verse || '?', text: s.message })
+    })
+
+    const lines: string[] = []
+    Object.values(groups).forEach((g) => {
+      const header = [g.version, `${g.book} ${g.chapter}`].filter(Boolean).join(' ')
+      if (header) lines.push(header)
+      g.verses.forEach((v) => {
+        lines.push(`${v.v} ${v.text}`.trim())
       })
-      .filter(Boolean)
-    if (lines.length) return lines.join('\n\n')
+      lines.push('') // blank line between groups
+    })
+
+    const text = lines.join('\n').trim()
+    if (text) return text
   }
+
   const looksLikeXml = /<[^>]+>/.test(decoded)
   const stripped = looksLikeXml ? decoded.replace(/<[^>]+>/g, '') : decoded
   return stripped.trim()
