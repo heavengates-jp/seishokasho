@@ -27,13 +27,23 @@ const toMillis = (value: unknown) =>
 
 const mapDoc = (id: string, data: Record<string, unknown>): Verse => {
   const date = (data.date as string) ?? id
+  const attachment = data.attachment as Attachment | undefined
+  const attachments = (data.attachments as Attachment[] | undefined) ?? []
+  const mergedAttachments =
+    attachments.length > 0
+      ? attachments
+      : attachment
+        ? [attachment]
+        : []
+
   return {
     id,
     date,
     weekday: (data.weekday as string) ?? formatWeekday(date),
     reference: (data.reference as string) ?? '',
     comment: (data.comment as string) ?? '',
-    attachment: data.attachment as Attachment | undefined,
+    attachment,
+    attachments: mergedAttachments,
     createdAt: toMillis(data.createdAt),
     updatedAt: toMillis(data.updatedAt),
   }
@@ -71,6 +81,7 @@ export async function fetchVerses(): Promise<Verse[]> {
 export async function saveVerse(
   verse: Omit<Verse, 'id' | 'weekday' | 'createdAt' | 'updatedAt'> & {
     attachment?: Attachment | null
+    attachments?: Attachment[]
   },
 ) {
   const weekday = formatWeekday(verse.date)
@@ -82,6 +93,7 @@ export async function saveVerse(
     reference: verse.reference,
     comment: verse.comment ?? '',
     attachment: verse.attachment ?? null,
+    attachments: verse.attachments ?? (verse.attachment ? [verse.attachment] : []),
     updatedAt: serverTimestamp(),
   }
 

@@ -1,89 +1,76 @@
-# 今日の聖書箇所 PWA (React + Firebase)
+# 今日の聖書箇所 PWA (React + Firebase + Supabase)
 
-ブラウザ/スマホから「今日の聖書箇所」を閲覧できる公開サイトです。管理者（ホスト）のみメール+パスワードでログインし、本文参照とコメント、添付資料（PDF/画像）の公開・削除が行えます。GitHub Pages に静的デプロイする前提で PWA（オフライン再表示対応）にしています。
+ブラウザ/スマホから「今日の聖書箇所」を閲覧でき、管理者がメール+パスワードで投稿・削除・添付アップロードできる PWA です。添付は PDF/画像/テキストに加え、ZIP をアップロードするとブラウザ内で解凍して Supabase Storage に展開します。
 
-## 技術スタック
+## スタック
 - Vite + React + TypeScript + React Router
-- Firebase: Authentication（Email/Password）, Firestore, Storage
-- PWA: `manifest.webmanifest` + カスタム Service Worker（直近閲覧データのキャッシュ表示）
-- GitHub Actions で `gh-pages` ブランチへデプロイ
+- Firebase: Authentication（Email/Password）, Firestore（verses コレクション）
+- Supabase: Storage (attachments バケット, Public 読み取り)
+- PWA: manifest + custom service worker（直近閲覧の Today/History をキャッシュ）
+- GitHub Actions + GitHub Pages デプロイ
 
-## フォルダ構成
+## 環境変数（.env / GitHub Secrets）
 ```
-src/
-  components/   UI 共通パーツ（Layout, VerseCard など）
-  contexts/     AuthProvider（Firebase Auth 状態）
-  lib/          firebase 初期化、firestore/storage 操作、型
-  pages/        画面: Home, History, HistoryDetail, AdminLogin, AdminDashboard
-public/
-  manifest.webmanifest
-  service-worker.js
-  icons/        PWA アイコン (192/512/maskable)
-.github/workflows/deploy.yml   GitHub Pages デプロイ
-.env.example                   Firebase 環境変数のテンプレート
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=   # 不使用なら空で可
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_BASE_PATH=/seishokasho/
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_SUPABASE_BUCKET=attachments
 ```
 
 ## セットアップ手順
-1. 依存インストール
+1. 依存インストール  
    ```powershell
-   npm install
+   npm ci
    ```
-2. Firebase プロジェクトを作成し Web アプリを追加。`構成` から下記値を取得して `.env` を作る（`.env.example` をコピー）。
-   ```env
-   VITE_FIREBASE_API_KEY=
-   VITE_FIREBASE_AUTH_DOMAIN=
-   VITE_FIREBASE_PROJECT_ID=
-   VITE_FIREBASE_STORAGE_BUCKET=
-   VITE_FIREBASE_MESSAGING_SENDER_ID=
-   VITE_FIREBASE_APP_ID=
-   # GitHub Pages のリポジトリ名配下に置く場合は "/<repo-name>/"
-   VITE_BASE_PATH=/
-   ```
-3. Firebase の有効化
-   - Authentication: Email/Password を有効化し、管理者用ユーザーを 1 つ作成。
-   - Firestore: 本番モード/テストモードどちらでも可。コレクション `verses`（DocumentID は `yyyy-mm-dd` 推奨）。
-   - Storage: デフォルトバケットを有効化（添付ファイル用）。
-4. ローカル起動
+2. Firebase  
+   - Authentication: Email/Password を有効化し、管理者ユーザーを作成。  
+   - Firestore: データベースを作成（例: asia-northeast1）、コレクション `verses` を使用。  
+   - ルールを「Firestore ルール例」に差し替えて公開。  
+3. Supabase（無料枠）  
+   - プロジェクトを作成し `Project URL` と `Publishable (anon) key` を控える。  
+   - Storage: `attachments` バケットを Public で作成。  
+   - ポリシー例（簡易運用）: anon で `insert/update` を許可。厳格にする場合は Firebase ID トークンを検証するプロキシを用意してください。
+4. `.env` を作成し上記値を設定。GitHub Secrets も同名で登録。  
+5. ローカル確認  
    ```powershell
    npm run dev
-   ```
-5. 本番ビルド
-   ```powershell
    npm run build
    ```
+6. デプロイ  
+   - GitHub Settings → Pages → Source を「GitHub Actions」に設定。  
+   - `main` に push すると `deploy.yml` が走り、`https://heavengates-jp.github.io/seishokasho/` に公開。
 
-## 画面と動作
-- `/` 今日の聖書箇所（未登録の場合は最新 or 「未登録」表示）。外部リンク（prs.app 検索 / bible.com 検索）付き。
-- `/history` 履歴一覧（日時・曜日表示、日付範囲と語句検索フィルタ）。
+## 画面
+- `/` 今日の聖書箇所（未登録なら最新 or 「未登録」）。外部リンク（prs.app / bible.com）付き。
+- `/history` 履歴一覧（日時・曜日表示、日付範囲/語句フィルタ）。
 - `/history/:date` 指定日の詳細。
 - `/admin/login` 管理者ログイン（Email/Password）。
-- `/admin` 投稿・履歴削除（認証必須）。
+- `/admin` 投稿・履歴削除（認証必須）。添付は PDF/画像/テキスト/ZIP 対応。ZIP はブラウザで解凍し、中身を個別ファイルとして Supabase にアップロードしてリンク化します。
 
-### データモデル（Firestore `verses` コレクション）
+## データモデル (Firestore `verses`)
 ```json
 {
   "date": "2026-01-05",   // docID に合わせる
   "weekday": "月",
   "reference": "ヨハネ3:16",
   "comment": "メモ（任意）",
-  "attachment": {         // 任意
-    "url": "https://...",
-    "type": "pdf" | "image",
-    "name": "資料.pdf"
-  },
+  "attachments": [
+    { "url": "https://...", "type": "pdf", "name": "資料.pdf" },
+    { "url": "https://...", "type": "image", "name": "photo.jpg" }
+  ],
   "createdAt": <serverTimestamp>,
   "updatedAt": <serverTimestamp>
 }
 ```
+（互換のため `attachment` がある場合は `attachments` にも反映します）
 
-### PWA / オフライン
-- `manifest.webmanifest` + `service-worker.js` でアイコン/静的ファイルをプリキャッシュ。
-- 直近閲覧の「今日」「履歴一覧」を `localStorage` に保存。ネットワーク不通時はキャッシュした内容を表示。
-- GitHub Pages 配下でも動作するよう `BASE_URL` / `VITE_BASE_PATH` に対応。
-
-## Firebase セキュリティルール（例）
-管理者のみ書き込み・削除を許可する例です。管理者判定はカスタムクレーム `admin: true` を付与したユーザーを想定しています（Firebase Admin SDK で付与）。
-
+## ルール例
 Firestore:
 ```rules
 rules_version = '2';
@@ -100,41 +87,21 @@ service cloud.firestore {
 }
 ```
 
-Storage:
-```rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
-    }
-    match /attachments/{allPaths=**} {
-      allow read: if true;   // 公開閲覧
-      allow write: if isAdmin();
-    }
-  }
-}
+Supabase Storage（簡易ポリシー例: anon でもアップロード可。URLを知ると誰でも書き込めるので本番は厳格化推奨）:
+```sql
+create policy "anon can upload attachments"
+on storage.objects for insert
+with check (bucket_id = 'attachments');
+
+create policy "anon can update attachments"
+on storage.objects for update
+using (bucket_id = 'attachments');
 ```
 
-### 管理者クレームの付与（参考コード）
-```ts
-// Node.js + Admin SDK 例
-import { initializeApp, applicationDefault } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-
-initializeApp({ credential: applicationDefault() })
-await getAuth().setCustomUserClaims('<ADMIN_UID>', { admin: true })
-```
-
-## GitHub Actions / GitHub Pages デプロイ
-1. リポジトリ Secrets に Firebase の値を登録（`VITE_FIREBASE_API_KEY` など、.env と同名で OK）。
-2. `Settings > Pages` で Source を「GitHub Actions」に設定。
-3. `main` ブランチに push すると `deploy.yml` が走り、`dist` を Pages に公開します。`VITE_BASE_PATH` はリポジトリ名に自動設定しています。
-
-## 受け入れ要件への対応
-- 管理者のみ投稿/削除: Firebase Auth + Firestore/Storage ルール例を提示、UI も認証必須に。
-- 公開閲覧: `/` / `/history` / `/history/:date` は未ログインで閲覧可能。
-- 日付+曜日表示とフィルタ: 履歴一覧で日付・曜日を表示し、範囲/語句検索フィルタを実装。
-- 添付資料: 管理画面から Storage にアップロードし、ユーザー側でリンク表示。
-- PWA: manifest + service worker、直近閲覧データをキャッシュしてオフライン再表示。
-- GitHub Actions: `deploy.yml` でビルド→Pages へ自動デプロイ。
+## 受け入れ要件メモ
+- 管理者のみ投稿/削除: Firebase Auth + Firestore ルール、UI もガード。
+- 公開閲覧: `/` `/history` `/history/:date` は未ログインOK。
+- 日付+曜日表示・検索: 履歴一覧で範囲/語句フィルタを実装。
+- 添付: Supabase Storage。ZIP はブラウザで解凍して個別ファイルとしてアップロード。
+- PWA: manifest + SW でキャッシュ表示。
+- GitHub Actions: `deploy.yml` で自動デプロイ。

@@ -1,6 +1,8 @@
+export type AttachmentType = 'pdf' | 'image' | 'text' | 'other'
+
 export type Attachment = {
   url: string
-  type: 'pdf' | 'image'
+  type: AttachmentType
   name?: string
 }
 
@@ -11,6 +13,7 @@ export type Verse = {
   reference: string
   comment?: string
   attachment?: Attachment | null
+  attachments?: Attachment[]
   createdAt?: number
   updatedAt?: number
 }

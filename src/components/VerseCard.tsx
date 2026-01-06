@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Verse } from '../lib/types'
 import { toBibleComLink, toPrsLink } from '../lib/utils'
-import AttachmentLink from './AttachmentLink'
+import AttachmentList from './AttachmentList'
 
 export default function VerseCard({
   verse,
@@ -10,6 +10,13 @@ export default function VerseCard({
   verse: Verse
   showDetailLink?: boolean
 }) {
+  const attachments =
+    verse.attachments && verse.attachments.length
+      ? verse.attachments
+      : verse.attachment
+        ? [verse.attachment]
+        : []
+
   return (
     <article className="card">
       <div className="card-header">
@@ -27,7 +34,7 @@ export default function VerseCard({
       </div>
       {verse.comment && <p className="body">{verse.comment}</p>}
       <div className="stack">
-        <AttachmentLink attachment={verse.attachment} />
+        <AttachmentList attachments={attachments} />
         <div className="link-row">
           <a
             className="chip"

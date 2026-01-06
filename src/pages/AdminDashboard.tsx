@@ -4,8 +4,8 @@ import dayjs from 'dayjs'
 import VerseList from '../components/VerseList'
 import { useAuth } from '../contexts/AuthContext'
 import { deleteVerse, fetchVerses, saveVerse } from '../lib/firestore'
-import type { Verse } from '../lib/types'
-import { uploadAttachment } from '../lib/storage'
+import type { Attachment, Verse } from '../lib/types'
+import { uploadAttachments } from '../lib/storage'
 import { formatWeekday, saveCache } from '../lib/utils'
 
 const emptyForm = () => ({
@@ -17,7 +17,7 @@ const emptyForm = () => ({
 export default function AdminDashboard() {
   const { user } = useAuth()
   const [form, setForm] = useState(emptyForm())
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [verses, setVerses] = useState<Verse[]>([])
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -44,18 +44,22 @@ export default function AdminDashboard() {
     setMessage(null)
     setStatus('loading')
     try {
-      const attachment = file ? await uploadAttachment(file) : null
+      let attachments: Attachment[] = []
+      if (files.length) {
+        attachments = await uploadAttachments(files)
+      }
+
       await saveVerse({
         date: form.date,
         reference: form.reference,
         comment: form.comment,
-        attachment,
+        attachments,
       })
       const updated = await fetchVerses()
       setVerses(updated)
       saveCache('cached_history', updated)
       setMessage('保存しました（公開済み）')
-      setFile(null)
+      setFiles([])
       setForm(emptyForm())
       setStatus('idle')
     } catch (err) {
@@ -126,11 +130,12 @@ export default function AdminDashboard() {
           />
         </label>
         <label>
-          添付資料（PDF or 画像, 任意）
+          添付資料（PDF/画像/テキスト/ZIP可・複数選択可）
           <input
             type="file"
-            accept=".pdf,image/*"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            multiple
+            accept=".pdf,image/*,.zip,.txt,.md,.csv"
+            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>
         {message && <p className="muted">{message}</p>}
