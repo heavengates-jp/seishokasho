@@ -134,7 +134,7 @@ export default function AdminDashboard() {
           <input
             type="file"
             multiple
-            accept=".pdf,image/*,.zip,.txt,.md,.csv"
+            accept=".pdf,image/*,.zip,.bdsc,.txt,.md,.csv"
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>
