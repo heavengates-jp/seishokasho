@@ -84,7 +84,10 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       if (previews[a.url]?.text || previews[a.url]?.loading) return
       setPreviews((p) => ({ ...p, [a.url]: { loading: true } }))
       try {
-        const res = await fetch(a.url)
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 8000)
+        const res = await fetch(a.url, { signal: controller.signal })
+        clearTimeout(timer)
         if (!res.ok) throw new Error('fetch failed')
         const buf = await res.arrayBuffer()
         const tryDecode = (enc: string) => {
