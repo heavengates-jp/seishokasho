@@ -112,7 +112,7 @@ export default function AdminDashboard() {
           </label>
         </div>
         <label>
-          聖書箇所（参照文字列）
+          メッセージタイトル（参照文字列）
           <input
             type="text"
             placeholder="例: ヨハネ3:16"

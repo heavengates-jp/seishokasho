@@ -1,6 +1,6 @@
-# 今日の聖書箇所 PWA (React + Firebase + Supabase)
+# 今日のメッセージタイトル PWA (React + Firebase + Supabase)
 
-ブラウザ/スマホから「今日の聖書箇所」を閲覧でき、管理者がメール+パスワードで投稿・削除・添付アップロードできる PWA です。添付は PDF/画像/テキストに加え、ZIP をアップロードするとブラウザ内で解凍して Supabase Storage に展開します。
+ブラウザ/スマホから「今日のメッセージタイトル」を閲覧でき、管理者がメール+パスワードで投稿・削除・添付アップロードできる PWA です。添付は PDF/画像/テキストに加え、ZIP をアップロードするとブラウザ内で解凍して Supabase Storage に展開します。
 
 ## スタック
 - Vite + React + TypeScript + React Router
@@ -47,7 +47,7 @@ VITE_SUPABASE_BUCKET=attachments
    - `main` に push すると `deploy.yml` が走り、`https://heavengates-jp.github.io/seishokasho/` に公開。
 
 ## 画面
-- `/` 今日の聖書箇所（未登録なら最新 or 「未登録」）。外部リンク（prs.app / bible.com）付き。
+- `/` 今日のメッセージタイトル（未登録なら最新 or 「未登録」）。外部リンク（prs.app / bible.com）付き。
 - `/history` 履歴一覧（日時・曜日表示、日付範囲/語句フィルタ）。
 - `/history/:date` 指定日の詳細。
 - `/admin/login` 管理者ログイン（Email/Password）。
