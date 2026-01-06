@@ -88,6 +88,12 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         return
       }
       setPreviews((p) => ({ ...p, [key]: { loading: true } }))
+      const fallbackTimer = setTimeout(() => {
+        setPreviews((p) => ({
+          ...p,
+          [key]: p[key]?.text ? p[key]! : { error: true },
+        }))
+      }, 6000)
       try {
         const controller = new AbortController()
         const timer = setTimeout(() => controller.abort(), 8000)
@@ -117,6 +123,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         })
         const raw = best || tryDecode('utf-8')
         const formatted = formatTextPreview(raw).trim()
+        clearTimeout(fallbackTimer)
         if (!cancelled) {
           if (formatted) {
             setPreviews((p) => ({ ...p, [key]: { text: formatted } }))
@@ -126,6 +133,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         }
       } catch (e) {
         console.error('text preview failed', e)
+        clearTimeout(fallbackTimer)
         if (!cancelled) {
           setPreviews((p) => ({ ...p, [key]: { error: true } }))
         }
