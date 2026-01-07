@@ -126,9 +126,6 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
             {a.type === 'text' && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
-            {a.type === 'text' && preview?.loading && (
-              <p className="muted small">読み込み中...</p>
-            )}
             {a.type === 'text' && preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}
