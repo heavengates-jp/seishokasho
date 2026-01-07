@@ -26,26 +26,39 @@ const formatTextPreview = (raw: string) => {
   const decoded = decodeEntities(raw)
 
   const parsePos = (pos: string) => {
-    // 例: "創世記 44:14"
-    const m = pos.match(/^(.+?)\\s+(\\d+):?(\\d+)?$/)
+    // 例: "創世記 44:14" / "創世記44:14" / "創世記 44：14"
+    const m =
+      pos.match(/^(.+?)\s*([0-9０-９]+)\s*[:：]\s*([0-9０-９]+)$/) ||
+      pos.match(/^(.+?)\s+([0-9０-９]+)\s+([0-9０-９]+)$/)
     if (!m) return null
     const [, book, chapter, verse] = m
-    return { book: book.trim(), chapter: chapter.trim(), verse: verse?.trim() ?? '' }
+    const normalizeNum = (v: string) => v.replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
+    return { book: book.trim(), chapter: normalizeNum(chapter.trim()), verse: normalizeNum(verse?.trim() ?? '') }
   }
 
   // .bdsc（シナリオXML）をパースして本文を抽出
   if (/<scenario[\s>]/i.test(decoded)) {
     const dom = new DOMParser().parseFromString(decoded, 'text/xml')
-    const scenes = Array.from(dom.getElementsByTagName('scene')).map((scene) => ({
-      version: scene.getAttribute('YakuText')?.trim() ?? '',
-      pos: parsePos(scene.getAttribute('PositionText')?.trim() ?? ''),
-      message: scene.getAttribute('MainMessage')?.trim() ?? '',
-    }))
+    const scenes = Array.from(dom.getElementsByTagName('scene')).map((scene) => {
+      const rawPos = scene.getAttribute('PositionText')?.trim() ?? ''
+      return {
+        version: scene.getAttribute('YakuText')?.trim() ?? '',
+        pos: parsePos(rawPos),
+        posRaw: rawPos,
+        message: scene.getAttribute('MainMessage')?.trim() ?? '',
+      }
+    })
 
     // 書名＋章ごとにまとめ、節は連続で表示
     const groups: Record<string, { book: string; chapter: string; version?: string; verses: { v: string; text: string }[] }> = {}
+    const fallbackLines: string[] = []
+
     scenes.forEach((s) => {
-      if (!s.pos) return
+      if (!s.pos) {
+        const fb = [s.version, s.posRaw, s.message].filter(Boolean).join(' ')
+        if (fb) fallbackLines.push(fb)
+        return
+      }
       const key = `${s.pos.book}-${s.pos.chapter}`
       if (!groups[key]) {
         groups[key] = { book: s.pos.book, chapter: s.pos.chapter, version: s.version, verses: [] }
@@ -55,7 +68,7 @@ const formatTextPreview = (raw: string) => {
 
     const lines: string[] = []
     Object.values(groups).forEach((g) => {
-      const header = [g.version, `${g.book} ${g.chapter}`].filter(Boolean).join(' ')
+      const header = [g.version, `${g.book} ${g.chapter}`].filter(Boolean).join(' ').trim()
       if (header) lines.push(header)
       g.verses.forEach((v) => {
         lines.push(`${v.v} ${v.text}`.trim())
@@ -63,8 +76,11 @@ const formatTextPreview = (raw: string) => {
       lines.push('') // blank line between groups
     })
 
-    const text = lines.join('\n').trim()
-    if (text) return text
+    const grouped = lines.join('\n').trim()
+    if (grouped) return grouped
+
+    const fallback = fallbackLines.join('\n').trim()
+    if (fallback) return fallback
   }
 
   const looksLikeXml = /<[^>]+>/.test(decoded)
