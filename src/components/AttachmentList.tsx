@@ -142,20 +142,26 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
           }
         }
         // shift_jis と UTF-8 をスコアで選択（� が少ない方）
-        const candidates = ['shift_jis', 'windows-31j', 'utf-8']
+        const candidates = ['utf-8', 'utf-16le', 'utf-16be', 'shift_jis', 'windows-31j']
         let best = ''
+        let bestScene = -1
         let bestScore = Infinity
         candidates.forEach((enc) => {
           const text = tryDecode(enc)
           if (!text) return
+          const sceneCount = (text.match(/<scene\b/g) || []).length
           const score = (text.match(/\uFFFD/g) || []).length
-          if (score < bestScore) {
+          if (sceneCount > bestScene || (sceneCount === bestScene && score < bestScore)) {
             best = text
+            bestScene = sceneCount
             bestScore = score
           }
         })
         const raw = best || tryDecode('utf-8')
-        const formatted = isBdsc(a) ? formatBdscPreview(raw) : formatTextPreview(raw)
+        let formatted = isBdsc(a) ? formatBdscPreview(raw) : formatTextPreview(raw)
+        if (isBdsc(a) && !formatted) {
+          formatted = formatTextPreview(raw)
+        }
         clearTimeout(fallbackTimer)
         if (!cancelled) {
           if (formatted) {
@@ -203,9 +209,6 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
             )}
             {shouldPreviewText(a) && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
-            )}
-            {isBdscFile && preview?.loading && (
-              <p className="muted small">読み込み中…</p>
             )}
             {preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
