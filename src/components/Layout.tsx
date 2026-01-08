@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="brand">
           <span className="brand-mark">✶</span>
           <div>
-            <p className="title">今日の聖書箇所</p>
+            <p className="title">??????? Ver.21</p>
           </div>
         </div>
         <nav className="nav">
