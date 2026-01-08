@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import VerseCard from '../components/VerseCard'
 import { isFirebaseConfigured } from '../lib/firebase'
 import { fetchTodayOrLatest } from '../lib/firestore'

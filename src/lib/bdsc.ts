@@ -35,7 +35,7 @@ export const parseBdscPreview = (raw: string) => {
 
     const decodedPosition = decodeEntities(positionText)
     const normalized = decodedPosition.replace(/\s+/g, ' ').trim()
-    const match = normalized.match(/^(.*?):\s*(\d+)\s*$/)
+    const match = normalized.match(/^(.*?)[：:]\s*(\d+)\s*$/)
     const bookChapter = match ? match[1] : normalized
     const verse = match ? match[2] : ''
     const decodedMessage = decodeEntities(mainMessage).trim()

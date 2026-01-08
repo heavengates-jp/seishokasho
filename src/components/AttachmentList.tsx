@@ -97,8 +97,8 @@ const formatBdscPreview = (raw: string) => {
     const position = scene.PositionText ?? ''
     const message = scene.MainMessage ?? ''
     if (!position || !message) return
-    const normalized = position.replace(/\s+/g, ' ').trim()
-    const match = normalized.match(/^(.*?):\s*(\d+)\s*$/)
+    const normalized = decodeEntities(position).replace(/\s+/g, ' ').trim()
+    const match = normalized.match(/^(.*?)[：:]\s*(\d+)\s*$/)
     const bookChapter = match ? match[1] : normalized
     const verse = match ? match[2] : ''
     const decodedMessage = decodeEntities(message).trim()

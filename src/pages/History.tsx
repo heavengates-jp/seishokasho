@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import VerseCard from '../components/VerseCard'
 import Filters, { type HistoryFilter } from '../components/Filters'
 import { fetchVerses } from '../lib/firestore'
@@ -52,7 +52,7 @@ export default function History() {
           <p className="eyebrow">History</p>
           <h1>履歴</h1>
         </div>
-        {status === 'loading' && <span className="pill">更新中</span>}
+        {status === 'loading' && <span className="pill">読み込み中</span>}
         {status === 'error' && <span className="pill danger">オフライン</span>}
       </div>
       <Filters value={filter} onChange={setFilter} />
@@ -62,7 +62,7 @@ export default function History() {
         ))}
       </div>
       {!filtered.length && (
-        <p className="muted">条件に合う履歴がありません（キャッシュも含む）</p>
+        <p className="muted">該当する履歴がありません（期間を変更してください）</p>
       )}
     </div>
   )
