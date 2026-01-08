@@ -14,10 +14,9 @@ const labelFor = (a: Attachment) => {
   }
 }
 
-const isPreviewableText = (a: Attachment) => {
-  if (a.type !== 'text') return false
+const isBdsc = (a: Attachment) => {
   const hint = `${a.url ?? ''} ${a.name ?? ''}`.toLowerCase()
-  return !hint.includes('.bdsc')
+  return hint.includes('.bdsc')
 }
 
 const decodeEntities = (text: string) =>
@@ -36,13 +35,71 @@ const formatTextPreview = (raw: string) => {
 
 type PreviewState = Record<string, { text?: string; error?: boolean; loading?: boolean }>
 
+const formatBdscPreview = (raw: string) => {
+  const parser = new DOMParser()
+  const xml = parser.parseFromString(raw, 'application/xml')
+  if (xml.querySelector('parsererror')) return ''
+  const scenes = Array.from(xml.querySelectorAll('scene'))
+  if (scenes.length === 0) return ''
+
+  const yakuText =
+    scenes.map((s) => s.getAttribute('YakuText')).find((v) => v && v.trim()) ?? ''
+
+  type Entry = { bookChapter: string; verse: string; message: string }
+  const entries: Entry[] = []
+
+  scenes.forEach((scene) => {
+    const position = scene.getAttribute('PositionText') ?? ''
+    const message = scene.getAttribute('MainMessage') ?? ''
+    if (!position || !message) return
+    const normalized = position.replace(/\s+/g, ' ').trim()
+    const match = normalized.match(/^(.*?):\s*(\d+)\s*$/)
+    const bookChapter = match ? match[1] : normalized
+    const verse = match ? match[2] : ''
+    const decodedMessage = decodeEntities(message).trim()
+    if (!decodedMessage) return
+    entries.push({ bookChapter, verse, message: decodedMessage })
+  })
+
+  if (entries.length === 0) return ''
+
+  const lines: string[] = []
+  if (yakuText) lines.push(yakuText)
+
+  let i = 0
+  while (i < entries.length) {
+    const current = entries[i]
+    const bookChapter = current.bookChapter
+    const section: Entry[] = []
+    while (i < entries.length && entries[i].bookChapter === bookChapter) {
+      section.push(entries[i])
+      i += 1
+    }
+    const verses = section.map((e) => e.verse).filter(Boolean)
+    const header =
+      verses.length > 0
+        ? `${bookChapter}:${verses[0]}${verses.length > 1 ? `-${verses[verses.length - 1]}` : ''}`
+        : bookChapter
+    lines.push(header)
+    if (section.length === 1) {
+      lines.push(section[0].message)
+    } else {
+      section.forEach((entry) => {
+        lines.push(entry.verse ? `${entry.verse}. ${entry.message}` : entry.message)
+      })
+    }
+  }
+
+  return lines.join('\n')
+}
+
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
   const [previews, setPreviews] = useState<PreviewState>({})
 
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment, key: string) => {
-      if (!isPreviewableText(a)) return
+      if (a.type !== 'text') return
       const existing = previews[key]
       if (existing?.text || existing?.loading || existing?.error) return
       if (!a.url) {
@@ -84,7 +141,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
           }
         })
         const raw = best || tryDecode('utf-8')
-        const formatted = formatTextPreview(raw)
+        const formatted = isBdsc(a) ? formatBdscPreview(raw) : formatTextPreview(raw)
         clearTimeout(fallbackTimer)
         if (!cancelled) {
           if (formatted) {
@@ -119,7 +176,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const preview = previews[key]
         return (
           <li key={key} className="attachment-item">
-            {!isPreviewableText(a) && (
+            {a.type !== 'text' && (
               <div className="attachment-meta">
                 <span className="attachment-name">
                   {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
@@ -129,13 +186,13 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                 </a>
               </div>
             )}
-            {isPreviewableText(a) && !a.url && (
+            {a.type === 'text' && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
-            {isPreviewableText(a) && preview?.text && (
+            {a.type === 'text' && preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}
-            {isPreviewableText(a) && preview?.error && (
+            {a.type === 'text' && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
           </li>
