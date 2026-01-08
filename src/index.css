@@ -330,6 +330,12 @@ p {
   flex-wrap: wrap;
 }
 
+.attachment-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
 .attachment-name {
   font-weight: 600;
 }

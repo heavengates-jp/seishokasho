@@ -158,6 +158,28 @@ const formatBdscPreview = (raw: string) => {
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
   const [previews, setPreviews] = useState<PreviewState>({})
 
+  const copyToClipboard = async (text: string) => {
+    if (!text) return
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch (e) {
+      console.error('copy failed', e)
+    }
+  }
+
+  const shareText = async (text: string) => {
+    if (!text) return
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+      } else {
+        await navigator.clipboard.writeText(text)
+      }
+    } catch (e) {
+      console.error('share failed', e)
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment, key: string) => {
@@ -226,6 +248,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const preview = previews[key]
         const isPreviewable = shouldPreviewText(a)
         const inlinePreview = (a.preview || '').trim()
+        const previewText = inlinePreview || preview?.text || ''
         const hasPreview = Boolean(inlinePreview || preview?.text)
         return (
           <li key={key} className="attachment-item">
@@ -253,7 +276,30 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
               <p className="muted small">読み込み中…</p>
             )}
             {hasPreview && (
-              <pre className="attachment-preview">{inlinePreview || preview?.text}</pre>
+              <>
+                <div className="attachment-meta">
+                  <span className="attachment-name">テキスト操作</span>
+                  <div className="attachment-actions">
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => copyToClipboard(previewText)}
+                    >
+                      コピー
+                    </button>
+                    {navigator.share && (
+                      <button
+                        type="button"
+                        className="chip"
+                        onClick={() => shareText(previewText)}
+                      >
+                        共有
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <pre className="attachment-preview">{previewText}</pre>
+              </>
             )}
             {isPreviewable && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
