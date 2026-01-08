@@ -43,6 +43,43 @@ const formatTextPreview = (raw: string) => {
 
 type PreviewState = Record<string, { text?: string; error?: boolean; loading?: boolean }>
 
+const formatBdscPreviewFromDom = (raw: string) => {
+  const parser = new DOMParser()
+  const xmlDoc = parser.parseFromString(raw, 'application/xml')
+  if (xmlDoc.querySelector('parsererror')) return ''
+  const scenes = Array.from(xmlDoc.getElementsByTagName('scene'))
+  if (scenes.length === 0) return ''
+
+  const output: string[] = []
+  let previousShouIndex = ''
+  let previousYakuText = ''
+
+  scenes.forEach((scene) => {
+    const yakuText = scene.getAttribute('YakuText') || ''
+    const shouIndex = scene.getAttribute('ShouIndex') || ''
+    const positionText = scene.getAttribute('PositionText') || ''
+    const mainMessage = scene.getAttribute('MainMessage') || ''
+
+    if (shouIndex !== previousShouIndex) {
+      if (output.length) output.push('')
+      if (yakuText) output.push(yakuText)
+      previousShouIndex = shouIndex
+      previousYakuText = yakuText
+    } else if (yakuText && yakuText !== previousYakuText) {
+      output.push(yakuText)
+      previousYakuText = yakuText
+    }
+
+    if (positionText || mainMessage) {
+      const decodedPosition = decodeEntities(positionText)
+      const decodedMessage = decodeEntities(mainMessage)
+      output.push(`${decodedPosition}\n  ${decodedMessage}`.trimEnd())
+    }
+  })
+
+  return output.join('\n')
+}
+
 const formatBdscPreview = (raw: string) => {
   const sceneTags = raw.match(/<scene\b[^>]*>/g) ?? []
   if (sceneTags.length === 0) return ''
@@ -133,33 +170,38 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const res = await fetch(a.url, { signal: controller.signal, cache: 'no-store' })
         clearTimeout(timer)
         if (!res.ok) throw new Error('fetch failed')
-        const buf = await res.arrayBuffer()
-        const tryDecode = (enc: string) => {
-          try {
-            return new TextDecoder(enc).decode(buf)
-          } catch {
-            return ''
+        let formatted = ''
+        if (isBdsc(a)) {
+          const rawText = await res.text()
+          formatted =
+            formatBdscPreviewFromDom(rawText) ||
+            formatBdscPreview(rawText) ||
+            formatTextPreview(rawText)
+        } else {
+          const buf = await res.arrayBuffer()
+          const tryDecode = (enc: string) => {
+            try {
+              return new TextDecoder(enc).decode(buf)
+            } catch {
+              return ''
+            }
           }
-        }
-        // shift_jis と UTF-8 をスコアで選択（� が少ない方）
-        const candidates = ['utf-8', 'utf-16le', 'utf-16be', 'shift_jis', 'windows-31j']
-        let best = ''
-        let bestScene = -1
-        let bestScore = Infinity
-        candidates.forEach((enc) => {
-          const text = tryDecode(enc)
-          if (!text) return
-          const sceneCount = (text.match(/<scene\b/g) || []).length
-          const score = (text.match(/\uFFFD/g) || []).length
-          if (sceneCount > bestScene || (sceneCount === bestScene && score < bestScore)) {
-            best = text
-            bestScene = sceneCount
-            bestScore = score
-          }
-        })
-        const raw = best || tryDecode('utf-8')
-        let formatted = isBdsc(a) ? formatBdscPreview(raw) : formatTextPreview(raw)
-        if (isBdsc(a) && !formatted) {
+          const candidates = ['utf-8', 'utf-16le', 'utf-16be', 'shift_jis', 'windows-31j']
+          let best = ''
+          let bestScene = -1
+          let bestScore = Infinity
+          candidates.forEach((enc) => {
+            const text = tryDecode(enc)
+            if (!text) return
+            const sceneCount = (text.match(/<scene\b/g) || []).length
+            const score = (text.match(/\uFFFD/g) || []).length
+            if (sceneCount > bestScene || (sceneCount === bestScene && score < bestScore)) {
+              best = text
+              bestScene = sceneCount
+              bestScore = score
+            }
+          })
+          const raw = best || tryDecode('utf-8')
           formatted = formatTextPreview(raw)
         }
         clearTimeout(fallbackTimer)
