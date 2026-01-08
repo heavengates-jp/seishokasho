@@ -43,7 +43,7 @@ export default function Home() {
 
   return (
     <div className="stack page">
-      {status === 'loading' && <span className="pill">読み込み中</span>}
+      {status === 'loading' && !verse && <span className="pill">読み込み中</span>}
       {status === 'error' && (
         <span className="pill danger">
           {isFirebaseConfigured ? 'オフライン表示' : '設定未完了'}
