@@ -8,7 +8,7 @@ const mimeFromName = (name: string) => {
   const lower = name.toLowerCase()
   if (lower.endsWith('.pdf')) return 'application/pdf'
   if (/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(lower)) return 'image/*'
-  if (/\.(txt|md|csv|json|bdsc)$/.test(lower)) return 'text/plain'
+  if (/\.(txt|md|csv|json)$/.test(lower)) return 'text/plain'
   return 'application/octet-stream'
 }
 
@@ -16,7 +16,7 @@ const typeFromName = (name: string): AttachmentType => {
   const lower = name.toLowerCase()
   if (lower.endsWith('.pdf')) return 'pdf'
   if (/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(lower)) return 'image'
-  if (/\.(txt|md|csv|json|bdsc)$/.test(lower)) return 'text'
+  if (/\.(txt|md|csv|json)$/.test(lower)) return 'text'
   return 'other'
 }
 

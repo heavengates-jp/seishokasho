@@ -9,9 +9,15 @@ const labelFor = (a: Attachment) => {
       return '画像'
     case 'text':
       return 'テキスト'
-    default:
-      return 'ファイル'
+  default:
+    return 'ファイル'
   }
+}
+
+const isPreviewableText = (a: Attachment) => {
+  if (a.type !== 'text') return false
+  const hint = `${a.url ?? ''} ${a.name ?? ''}`.toLowerCase()
+  return !hint.includes('.bdsc')
 }
 
 const decodeEntities = (text: string) =>
@@ -36,7 +42,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment, key: string) => {
-      if (a.type !== 'text') return
+      if (!isPreviewableText(a)) return
       const existing = previews[key]
       if (existing?.text || existing?.loading || existing?.error) return
       if (!a.url) {
@@ -113,7 +119,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const preview = previews[key]
         return (
           <li key={key} className="attachment-item">
-            {a.type !== 'text' && (
+            {!isPreviewableText(a) && (
               <div className="attachment-meta">
                 <span className="attachment-name">
                   {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
@@ -123,13 +129,13 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                 </a>
               </div>
             )}
-            {a.type === 'text' && !a.url && (
+            {isPreviewableText(a) && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
-            {a.type === 'text' && preview?.text && (
+            {isPreviewableText(a) && preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}
-            {a.type === 'text' && preview?.error && (
+            {isPreviewableText(a) && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
           </li>
