@@ -194,7 +194,6 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       {attachments.map((a, idx) => {
         const key = a.url || `missing-${idx}`
         const preview = previews[key]
-        const isBdscFile = isBdsc(a)
         return (
           <li key={key} className="attachment-item">
             {!preview?.text && !shouldPreviewText(a) && (
