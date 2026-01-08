@@ -19,6 +19,8 @@ const isBdsc = (a: Attachment) => {
   return hint.includes('.bdsc')
 }
 
+const shouldPreviewText = (a: Attachment) => a.type === 'text' || isBdsc(a)
+
 const decodeEntities = (text: string) =>
   text
     .replace(/&lt;/g, '<')
@@ -99,7 +101,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment, key: string) => {
-      if (a.type !== 'text') return
+      if (!shouldPreviewText(a)) return
       const existing = previews[key]
       if (existing?.text || existing?.loading || existing?.error) return
       if (!a.url) {
@@ -176,7 +178,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const preview = previews[key]
         return (
           <li key={key} className="attachment-item">
-            {a.type !== 'text' && (
+            {!preview?.text && !shouldPreviewText(a) && (
               <div className="attachment-meta">
                 <span className="attachment-name">
                   {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
@@ -186,13 +188,13 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                 </a>
               </div>
             )}
-            {a.type === 'text' && !a.url && (
+            {shouldPreviewText(a) && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
-            {a.type === 'text' && preview?.text && (
+            {preview?.text && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}
-            {a.type === 'text' && preview?.error && (
+            {shouldPreviewText(a) && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
           </li>
