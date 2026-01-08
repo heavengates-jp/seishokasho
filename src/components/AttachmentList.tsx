@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import type { Attachment } from '../lib/types'
+import { decodeEntities, parseBdscPreview } from '../lib/bdsc'
 
 const labelFor = (a: Attachment) => {
   switch (a.type) {
@@ -20,20 +21,6 @@ const isBdsc = (a: Attachment) => {
 }
 
 const shouldPreviewText = (a: Attachment) => a.type === 'text' || isBdsc(a)
-
-const decodeEntities = (text: string) =>
-  text
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
-      String.fromCharCode(parseInt(hex, 16)),
-    )
-    .replace(/&#([0-9]+);/g, (_, num) =>
-      String.fromCharCode(parseInt(num, 10)),
-    )
 
 const formatTextPreview = (raw: string) => {
   // XMLなどをパースせず、生のテキストを表示
@@ -85,43 +72,6 @@ const decodeBestText = (buf: ArrayBuffer) => {
     }
   })
   return best || tryDecode('utf-8')
-}
-
-const formatBdscPreviewFromDom = (raw: string) => {
-  const parser = new DOMParser()
-  const xmlDoc = parser.parseFromString(raw, 'application/xml')
-  if (xmlDoc.querySelector('parsererror')) return ''
-  const scenes = Array.from(xmlDoc.getElementsByTagName('scene'))
-  if (scenes.length === 0) return ''
-
-  const output: string[] = []
-  let previousShouIndex = ''
-  let previousYakuText = ''
-
-  scenes.forEach((scene) => {
-    const yakuText = scene.getAttribute('YakuText') || ''
-    const shouIndex = scene.getAttribute('ShouIndex') || ''
-    const positionText = scene.getAttribute('PositionText') || ''
-    const mainMessage = scene.getAttribute('MainMessage') || ''
-
-    if (shouIndex !== previousShouIndex) {
-      if (output.length) output.push('')
-      if (yakuText) output.push(yakuText)
-      previousShouIndex = shouIndex
-      previousYakuText = yakuText
-    } else if (yakuText && yakuText !== previousYakuText) {
-      output.push(yakuText)
-      previousYakuText = yakuText
-    }
-
-    if (positionText || mainMessage) {
-      const decodedPosition = decodeEntities(positionText)
-      const decodedMessage = decodeEntities(mainMessage)
-      output.push(`${decodedPosition}\n  ${decodedMessage}`.trimEnd())
-    }
-  })
-
-  return output.join('\n')
 }
 
 const formatBdscPreview = (raw: string) => {
@@ -194,7 +144,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
   useEffect(() => {
     let cancelled = false
     const load = async (a: Attachment, key: string) => {
-      if (!shouldPreviewText(a)) return
+      if (!shouldPreviewText(a) || a.preview) return
       const existing = previews[key]
       if (existing?.text || existing?.loading || existing?.error) return
       if (!a.url) {
@@ -219,7 +169,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         if (isBdsc(a)) {
           const rawText = decodeBestText(buf)
           formatted =
-            formatBdscPreviewFromDom(rawText) ||
+            parseBdscPreview(rawText) ||
             formatBdscPreview(rawText) ||
             formatTextPreview(rawText)
         } else {
@@ -258,7 +208,8 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const key = a.url || `missing-${idx}`
         const preview = previews[key]
         const isPreviewable = shouldPreviewText(a)
-        const hasPreview = Boolean(preview?.text)
+        const inlinePreview = (a.preview || '').trim()
+        const hasPreview = Boolean(inlinePreview || preview?.text)
         return (
           <li key={key} className="attachment-item">
             {!hasPreview && !isPreviewable && (
@@ -285,7 +236,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
               <p className="muted small">読み込み中…</p>
             )}
             {hasPreview && (
-              <pre className="attachment-preview">{preview.text}</pre>
+              <pre className="attachment-preview">{inlinePreview || preview?.text}</pre>
             )}
             {isPreviewable && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>

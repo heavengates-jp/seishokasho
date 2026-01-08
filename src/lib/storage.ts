@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import { supabase } from './supabase'
+import { parseBdscPreview } from './bdsc'
 import type { Attachment, AttachmentType } from './types'
 
 const bucket = import.meta.env.VITE_SUPABASE_BUCKET ?? 'attachments'
@@ -30,6 +31,7 @@ const sanitizeName = (name: string) =>
 async function uploadBlob(
   blob: Blob,
   originalName: string,
+  preview?: string,
 ): Promise<Attachment> {
   const safeName = sanitizeName(originalName)
   const path = `${Date.now()}-${safeName}`
@@ -54,6 +56,7 @@ async function uploadBlob(
     url: publicUrlData.publicUrl,
     type: typeFromName(safeName),
     name: originalName,
+    preview,
   }
 }
 
@@ -65,7 +68,10 @@ export async function uploadAttachments(files: File[]): Promise<Attachment[]> {
       file.type === 'application/zip' || file.name.toLowerCase().endsWith('.zip')
 
     if (!isZip) {
-      attachments.push(await uploadBlob(file, file.name))
+      const preview = file.name.toLowerCase().endsWith('.bdsc')
+        ? parseBdscPreview(await file.text())
+        : undefined
+      attachments.push(await uploadBlob(file, file.name, preview))
       continue
     }
 
@@ -73,11 +79,14 @@ export async function uploadAttachments(files: File[]): Promise<Attachment[]> {
     const entries = Object.values(zip.files).filter((f) => !f.dir)
 
     for (const entry of entries) {
+      const preview = entry.name.toLowerCase().endsWith('.bdsc')
+        ? parseBdscPreview(await entry.async('string'))
+        : undefined
       const blob = await entry.async('blob')
       const typedBlob = new Blob([blob], {
         type: mimeFromName(entry.name),
       })
-      attachments.push(await uploadBlob(typedBlob, entry.name))
+      attachments.push(await uploadBlob(typedBlob, entry.name, preview))
     }
   }
 

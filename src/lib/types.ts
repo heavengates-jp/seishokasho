@@ -4,6 +4,7 @@ export type Attachment = {
   url: string
   type: AttachmentType
   name?: string
+  preview?: string
 }
 
 export type Verse = {
