@@ -1,14 +1,14 @@
-import type { Verse } from '../lib/types'
+﻿import type { Verse } from '../lib/types'
 
 export default function VerseList({
   verses,
   onDelete,
 }: {
   verses: Verse[]
-  onDelete?: (date: string) => void
+  onDelete?: (id: string) => void
 }) {
   if (!verses.length) {
-    return <p className="muted">登録がありません</p>
+    return <p className="muted">履歴がありません</p>
   }
   return (
     <ul className="list">

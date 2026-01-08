@@ -1,15 +1,16 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import VerseCard from '../components/VerseCard'
-import { fetchVerseByDate } from '../lib/firestore'
+import { fetchVersesByDate } from '../lib/firestore'
 import type { Verse } from '../lib/types'
 import { readCache } from '../lib/utils'
 
 export default function HistoryDetail() {
   const { date } = useParams<{ date: string }>()
-  const [verse, setVerse] = useState<Verse | null>(() => {
+  const [verses, setVerses] = useState<Verse[]>(() => {
+    if (!date) return []
     const cached = readCache<Verse[]>('cached_history') ?? []
-    return cached.find((v) => v.id === date) ?? null
+    return cached.filter((v) => v.date === date)
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
@@ -18,8 +19,8 @@ export default function HistoryDetail() {
     const load = async () => {
       setStatus('loading')
       try {
-        const result = await fetchVerseByDate(date)
-        setVerse(result)
+        const result = await fetchVersesByDate(date)
+        setVerses(result)
         setStatus('idle')
       } catch (e) {
         console.error(e)
@@ -44,8 +45,12 @@ export default function HistoryDetail() {
           {status === 'error' && <span className="pill danger">エラー</span>}
         </div>
       </div>
-      {verse ? (
-        <VerseCard verse={verse} />
+      {verses.length > 0 ? (
+        <div className="stack">
+          {verses.map((verse) => (
+            <VerseCard key={verse.id} verse={verse} />
+          ))}
+        </div>
       ) : (
         <p className="muted">データが見つかりません（削除済みの可能性）</p>
       )}

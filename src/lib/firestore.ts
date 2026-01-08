@@ -1,15 +1,13 @@
 import dayjs from 'dayjs'
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
-  getDoc,
   getDocs,
-  limit,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from './firebase'
 import type { Attachment, Verse } from './types'
@@ -54,28 +52,18 @@ export async function fetchTodayOrLatest(): Promise<Verse | null> {
     throw new Error('Firebase config missing')
   }
   const todayId = dayjs().format('YYYY-MM-DD')
-  const todaySnap = await getDoc(doc(versesRef, todayId))
-  if (todaySnap.exists()) {
-    return mapDoc(todaySnap.id, todaySnap.data())
-  }
-
-  const latestSnap = await getDocs(
-    query(versesRef, orderBy('date', 'desc'), limit(1)),
-  )
-  if (!latestSnap.empty) {
-    const docSnap = latestSnap.docs[0]
-    return mapDoc(docSnap.id, docSnap.data())
-  }
-  return null
+  const verses = await fetchVerses()
+  const today = verses.find((v) => v.date === todayId)
+  return today ?? verses[0] ?? null
 }
 
-export async function fetchVerseByDate(date: string): Promise<Verse | null> {
+export async function fetchVersesByDate(date: string): Promise<Verse[]> {
   if (!isFirebaseConfigured) {
     throw new Error('Firebase config missing')
   }
-  const snap = await getDoc(doc(versesRef, date))
-  if (!snap.exists()) return null
-  return mapDoc(snap.id, snap.data())
+  const snaps = await getDocs(query(versesRef, orderBy('date', 'desc')))
+  const verses: Verse[] = snaps.docs.map((d) => mapDoc(d.id, d.data()))
+  return sortByDateDesc(verses).filter((v) => v.date === date)
 }
 
 export async function fetchVerses(): Promise<Verse[]> {
@@ -94,8 +82,6 @@ export async function saveVerse(
   },
 ) {
   const weekday = formatWeekday(verse.date)
-  const ref = doc(versesRef, verse.date)
-  const existing = await getDoc(ref)
   const payload: Record<string, unknown> = {
     date: verse.date,
     weekday,
@@ -103,14 +89,10 @@ export async function saveVerse(
     comment: verse.comment ?? '',
     attachment: verse.attachment ?? null,
     attachments: verse.attachments ?? (verse.attachment ? [verse.attachment] : []),
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
-
-  if (existing.exists()) {
-    await setDoc(ref, payload, { merge: true })
-  } else {
-    await setDoc(ref, { ...payload, createdAt: serverTimestamp() })
-  }
+  await addDoc(versesRef, payload)
 }
 
-export const deleteVerse = (date: string) => deleteDoc(doc(versesRef, date))
+export const deleteVerse = (id: string) => deleteDoc(doc(versesRef, id))

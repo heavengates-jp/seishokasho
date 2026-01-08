@@ -129,11 +129,13 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleDelete = async (date: string) => {
-    if (!window.confirm(`${date} を削除しますか？`)) return
+  const handleDelete = async (id: string) => {
+    const target = verses.find((v) => v.id === id)
+    const label = target ? `${target.date} ${target.reference}` : id
+    if (!window.confirm(`${label} を削除しますか？`)) return
     try {
-      await deleteVerse(date)
-      const updated = verses.filter((v) => v.id !== date)
+      await deleteVerse(id)
+      const updated = verses.filter((v) => v.id !== id)
       setVerses(updated)
       saveCache('cached_history', updated)
     } catch (err) {

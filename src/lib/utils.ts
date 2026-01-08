@@ -1,4 +1,4 @@
-import dayjs from 'dayjs'
+﻿import dayjs from 'dayjs'
 
 const weekdayTable = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -31,6 +31,13 @@ export function readCache<T>(key: string): T | null {
   }
 }
 
-export function sortByDateDesc<T extends { date: string }>(items: T[]) {
-  return [...items].sort((a, b) => (a.date > b.date ? -1 : 1))
+export function sortByDateDesc<
+  T extends { date: string; updatedAt?: number; createdAt?: number },
+>(items: T[]) {
+  return [...items].sort((a, b) => {
+    if (a.date !== b.date) return a.date > b.date ? -1 : 1
+    const aTime = a.updatedAt ?? a.createdAt ?? 0
+    const bTime = b.updatedAt ?? b.createdAt ?? 0
+    return aTime > bTime ? -1 : aTime < bTime ? 1 : 0
+  })
 }

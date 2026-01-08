@@ -88,12 +88,12 @@ const formatBdscPreview = (raw: string) => {
   }
 
   const scenes = sceneTags.map(readAttrs)
-  const yakuText = scenes.map((s) => s.YakuText).find((v) => v && v.trim()) ?? ''
 
-  type Entry = { bookChapter: string; verse: string; message: string }
+  type Entry = { bookChapter: string; verse: string; message: string; yakuText: string }
   const entries: Entry[] = []
 
   scenes.forEach((scene) => {
+    const yakuText = scene.YakuText ?? ''
     const position = scene.PositionText ?? ''
     const message = scene.MainMessage ?? ''
     if (!position || !message) return
@@ -103,23 +103,40 @@ const formatBdscPreview = (raw: string) => {
     const verse = match ? match[2] : ''
     const decodedMessage = decodeEntities(message).trim()
     if (!decodedMessage) return
-    entries.push({ bookChapter, verse, message: decodedMessage })
+    entries.push({ bookChapter, verse, message: decodedMessage, yakuText })
   })
 
   if (entries.length === 0) return ''
 
   const lines: string[] = []
-  if (yakuText) lines.push(yakuText)
 
   let i = 0
+  let currentYaku = ''
+  let firstInYaku = true
   while (i < entries.length) {
+    const yakuText = entries[i].yakuText || ''
+    if (yakuText && yakuText !== currentYaku) {
+      if (lines.length) lines.push('')
+      lines.push(yakuText)
+      currentYaku = yakuText
+      firstInYaku = true
+    }
+
     const current = entries[i]
     const bookChapter = current.bookChapter
     const section: Entry[] = []
-    while (i < entries.length && entries[i].bookChapter === bookChapter) {
+    while (
+      i < entries.length &&
+      entries[i].bookChapter === bookChapter &&
+      (entries[i].yakuText || '') === yakuText
+    ) {
       section.push(entries[i])
       i += 1
     }
+
+    if (!firstInYaku) lines.push('')
+    firstInYaku = false
+
     const verses = section.map((e) => e.verse).filter(Boolean)
     const header =
       verses.length > 0
