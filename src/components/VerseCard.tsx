@@ -32,7 +32,7 @@ export default function VerseCard({
         )}
       </div>
       {verse.comment && <p className="body">{verse.comment}</p>}
-      <div className="stack">
+      <div className={`stack${showDetailLink ? ' attachment-desktop-only' : ''}`}>
         <AttachmentList attachments={attachments} />
       </div>
     </article>
