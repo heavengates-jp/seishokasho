@@ -28,7 +28,7 @@ export default function HistoryDetail() {
       }
     }
     load()
-  }, [date])
+  }, [id])
 
   return (
     <div className="stack page">
