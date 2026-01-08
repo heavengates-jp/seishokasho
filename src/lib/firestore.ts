@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { db, isFirebaseConfigured } from './firebase'
 import type { Attachment, Verse } from './types'
 import { formatWeekday, sortByDateDesc } from './utils'
 
@@ -50,6 +50,9 @@ const mapDoc = (id: string, data: Record<string, unknown>): Verse => {
 }
 
 export async function fetchTodayOrLatest(): Promise<Verse | null> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase config missing')
+  }
   const todayId = dayjs().format('YYYY-MM-DD')
   const todaySnap = await getDoc(doc(versesRef, todayId))
   if (todaySnap.exists()) {
@@ -67,12 +70,18 @@ export async function fetchTodayOrLatest(): Promise<Verse | null> {
 }
 
 export async function fetchVerseByDate(date: string): Promise<Verse | null> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase config missing')
+  }
   const snap = await getDoc(doc(versesRef, date))
   if (!snap.exists()) return null
   return mapDoc(snap.id, snap.data())
 }
 
 export async function fetchVerses(): Promise<Verse[]> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase config missing')
+  }
   const snaps = await getDocs(query(versesRef, orderBy('date', 'desc')))
   const verses: Verse[] = snaps.docs.map((d) => mapDoc(d.id, d.data()))
   return sortByDateDesc(verses)

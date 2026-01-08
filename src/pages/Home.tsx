@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import VerseCard from '../components/VerseCard'
+import { isFirebaseConfigured } from '../lib/firebase'
 import { fetchTodayOrLatest } from '../lib/firestore'
 import type { Verse } from '../lib/types'
 import { readCache, saveCache } from '../lib/utils'
@@ -13,25 +14,41 @@ export default function Home() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
   useEffect(() => {
+    let alive = true
+    const timer = setTimeout(() => {
+      if (alive) setStatus('error')
+    }, 8000)
     const load = async () => {
       setStatus('loading')
       try {
         const latest = await fetchTodayOrLatest()
+        if (!alive) return
         setVerse(latest)
         if (latest) saveCache(CACHE_KEY, latest)
         setStatus('idle')
       } catch (e) {
+        if (!alive) return
         console.error(e)
         setStatus('error')
+      } finally {
+        clearTimeout(timer)
       }
     }
     load()
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
   }, [])
 
   return (
     <div className="stack page">
       {status === 'loading' && <span className="pill">読み込み中</span>}
-      {status === 'error' && <span className="pill danger">オフライン表示</span>}
+      {status === 'error' && (
+        <span className="pill danger">
+          {isFirebaseConfigured ? 'オフライン表示' : '設定未完了'}
+        </span>
+      )}
       {verse ? (
         <VerseCard verse={verse} />
       ) : (
