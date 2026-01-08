@@ -26,7 +26,7 @@ export default function VerseCard({
           <h2 className="card-title">{verse.reference}</h2>
         </div>
         {showDetailLink && (
-          <Link className="ghost" to={`/history/${verse.date}`}>
+          <Link className="ghost" to={`/history/item/${verse.id}`}>
             詳細
           </Link>
         )}

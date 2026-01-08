@@ -1,26 +1,26 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import VerseCard from '../components/VerseCard'
-import { fetchVersesByDate } from '../lib/firestore'
+import { fetchVerseById } from '../lib/firestore'
 import type { Verse } from '../lib/types'
 import { readCache } from '../lib/utils'
 
 export default function HistoryDetail() {
-  const { date } = useParams<{ date: string }>()
-  const [verses, setVerses] = useState<Verse[]>(() => {
-    if (!date) return []
+  const { id } = useParams<{ id: string }>()
+  const [verse, setVerse] = useState<Verse | null>(() => {
+    if (!id) return null
     const cached = readCache<Verse[]>('cached_history') ?? []
-    return cached.filter((v) => v.date === date)
+    return cached.find((v) => v.id === id) ?? null
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
   useEffect(() => {
-    if (!date) return
+    if (!id) return
     const load = async () => {
       setStatus('loading')
       try {
-        const result = await fetchVersesByDate(date)
-        setVerses(result)
+        const result = await fetchVerseById(id)
+        setVerse(result)
         setStatus('idle')
       } catch (e) {
         console.error(e)
@@ -35,7 +35,7 @@ export default function HistoryDetail() {
       <div className="page-head">
         <div>
           <p className="eyebrow">Detail</p>
-          <h1>{date} の詳細</h1>
+          <h1>{verse?.date ?? '詳細'} の詳細</h1>
         </div>
         <div className="link-row">
           <Link className="ghost" to="/history">
@@ -45,12 +45,8 @@ export default function HistoryDetail() {
           {status === 'error' && <span className="pill danger">エラー</span>}
         </div>
       </div>
-      {verses.length > 0 ? (
-        <div className="stack">
-          {verses.map((verse) => (
-            <VerseCard key={verse.id} verse={verse} />
-          ))}
-        </div>
+      {verse ? (
+        <VerseCard verse={verse} />
       ) : (
         <p className="muted">データが見つかりません（削除済みの可能性）</p>
       )}

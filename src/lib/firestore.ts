@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -64,6 +65,15 @@ export async function fetchVersesByDate(date: string): Promise<Verse[]> {
   const snaps = await getDocs(query(versesRef, orderBy('date', 'desc')))
   const verses: Verse[] = snaps.docs.map((d) => mapDoc(d.id, d.data()))
   return sortByDateDesc(verses).filter((v) => v.date === date)
+}
+
+export async function fetchVerseById(id: string): Promise<Verse | null> {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase config missing')
+  }
+  const snap = await getDoc(doc(versesRef, id))
+  if (!snap.exists()) return null
+  return mapDoc(snap.id, snap.data())
 }
 
 export async function fetchVerses(): Promise<Verse[]> {
