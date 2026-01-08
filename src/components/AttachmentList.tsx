@@ -236,9 +236,11 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
       {attachments.map((a, idx) => {
         const key = a.url || `missing-${idx}`
         const preview = previews[key]
+        const isPreviewable = shouldPreviewText(a)
+        const hasPreview = Boolean(preview?.text)
         return (
           <li key={key} className="attachment-item">
-            {!preview?.text && !shouldPreviewText(a) && (
+            {!hasPreview && !isPreviewable && (
               <div className="attachment-meta">
                 <span className="attachment-name">
                   {a.name ?? '添付ファイル'} <span className="muted">[{labelFor(a)}]</span>
@@ -248,13 +250,23 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                 </a>
               </div>
             )}
-            {shouldPreviewText(a) && !a.url && (
+            {isPreviewable && !hasPreview && a.name && (
+              <div className="attachment-meta">
+                <span className="attachment-name">
+                  {a.name} <span className="muted">[{labelFor(a)}]</span>
+                </span>
+              </div>
+            )}
+            {isPreviewable && !a.url && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
-            {preview?.text && (
+            {isPreviewable && !hasPreview && !preview?.error && (
+              <p className="muted small">読み込み中…</p>
+            )}
+            {hasPreview && (
               <pre className="attachment-preview">{preview.text}</pre>
             )}
-            {shouldPreviewText(a) && preview?.error && (
+            {isPreviewable && preview?.error && (
               <p className="muted small">プレビューを読み込めませんでした</p>
             )}
           </li>
