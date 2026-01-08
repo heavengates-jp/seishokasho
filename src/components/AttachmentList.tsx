@@ -43,6 +43,50 @@ const formatTextPreview = (raw: string) => {
 
 type PreviewState = Record<string, { text?: string; error?: boolean; loading?: boolean }>
 
+const decodeWithBom = (buf: ArrayBuffer) => {
+  const bytes = new Uint8Array(buf)
+  if (bytes.length >= 2) {
+    if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+      return new TextDecoder('utf-16le').decode(bytes)
+    }
+    if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+      return new TextDecoder('utf-16be').decode(bytes)
+    }
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    return new TextDecoder('utf-8').decode(bytes)
+  }
+  return ''
+}
+
+const decodeBestText = (buf: ArrayBuffer) => {
+  const bom = decodeWithBom(buf)
+  if (bom) return bom
+  const tryDecode = (enc: string) => {
+    try {
+      return new TextDecoder(enc).decode(buf)
+    } catch {
+      return ''
+    }
+  }
+  const candidates = ['utf-8', 'utf-16le', 'utf-16be', 'shift_jis', 'windows-31j']
+  let best = ''
+  let bestScene = -1
+  let bestScore = Infinity
+  candidates.forEach((enc) => {
+    const text = tryDecode(enc)
+    if (!text) return
+    const sceneCount = (text.match(/<scene\b/g) || []).length
+    const score = (text.match(/\uFFFD/g) || []).length
+    if (sceneCount > bestScene || (sceneCount === bestScene && score < bestScore)) {
+      best = text
+      bestScene = sceneCount
+      bestScore = score
+    }
+  })
+  return best || tryDecode('utf-8')
+}
+
 const formatBdscPreviewFromDom = (raw: string) => {
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(raw, 'application/xml')
@@ -170,39 +214,16 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
         const res = await fetch(a.url, { signal: controller.signal, cache: 'no-store' })
         clearTimeout(timer)
         if (!res.ok) throw new Error('fetch failed')
+        const buf = await res.arrayBuffer()
         let formatted = ''
         if (isBdsc(a)) {
-          const rawText = await res.text()
+          const rawText = decodeBestText(buf)
           formatted =
             formatBdscPreviewFromDom(rawText) ||
             formatBdscPreview(rawText) ||
             formatTextPreview(rawText)
         } else {
-          const buf = await res.arrayBuffer()
-          const tryDecode = (enc: string) => {
-            try {
-              return new TextDecoder(enc).decode(buf)
-            } catch {
-              return ''
-            }
-          }
-          const candidates = ['utf-8', 'utf-16le', 'utf-16be', 'shift_jis', 'windows-31j']
-          let best = ''
-          let bestScene = -1
-          let bestScore = Infinity
-          candidates.forEach((enc) => {
-            const text = tryDecode(enc)
-            if (!text) return
-            const sceneCount = (text.match(/<scene\b/g) || []).length
-            const score = (text.match(/\uFFFD/g) || []).length
-            if (sceneCount > bestScene || (sceneCount === bestScene && score < bestScore)) {
-              best = text
-              bestScene = sceneCount
-              bestScore = score
-            }
-          })
-          const raw = best || tryDecode('utf-8')
-          formatted = formatTextPreview(raw)
+          formatted = formatTextPreview(decodeBestText(buf))
         }
         clearTimeout(fallbackTimer)
         if (!cancelled) {
