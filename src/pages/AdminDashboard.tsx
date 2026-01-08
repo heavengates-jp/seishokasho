@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import VerseList from '../components/VerseList'
 import { useAuth } from '../contexts/AuthContext'
@@ -16,6 +16,7 @@ const emptyForm = () => ({
 
 export default function AdminDashboard() {
   const { user } = useAuth()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [form, setForm] = useState(emptyForm())
   const [files, setFiles] = useState<File[]>([])
   const [verses, setVerses] = useState<Verse[]>([])
@@ -60,6 +61,7 @@ export default function AdminDashboard() {
       saveCache('cached_history', updated)
       setMessage('保存しました（公開済み）')
       setFiles([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
       setForm(emptyForm())
       setStatus('idle')
     } catch (err) {
@@ -135,6 +137,7 @@ export default function AdminDashboard() {
             type="file"
             multiple
             accept=".pdf,image/*,.zip,.bdsc,.txt,.md,.csv"
+            ref={fileInputRef}
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>

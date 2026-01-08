@@ -28,6 +28,12 @@ const decodeEntities = (text: string) =>
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    )
+    .replace(/&#([0-9]+);/g, (_, num) =>
+      String.fromCharCode(parseInt(num, 10)),
+    )
 
 const formatTextPreview = (raw: string) => {
   // XMLなどをパースせず、生のテキストを表示
@@ -38,21 +44,27 @@ const formatTextPreview = (raw: string) => {
 type PreviewState = Record<string, { text?: string; error?: boolean; loading?: boolean }>
 
 const formatBdscPreview = (raw: string) => {
-  const parser = new DOMParser()
-  const xml = parser.parseFromString(raw, 'application/xml')
-  if (xml.querySelector('parsererror')) return ''
-  const scenes = Array.from(xml.querySelectorAll('scene'))
-  if (scenes.length === 0) return ''
+  const sceneTags = raw.match(/<scene\b[^>]*>/g) ?? []
+  if (sceneTags.length === 0) return ''
 
-  const yakuText =
-    scenes.map((s) => s.getAttribute('YakuText')).find((v) => v && v.trim()) ?? ''
+  const readAttrs = (tag: string) => {
+    const attrs: Record<string, string> = {}
+    tag.replace(/(\w+)="([^"]*)"/g, (_, key, value) => {
+      attrs[key] = value
+      return ''
+    })
+    return attrs
+  }
+
+  const scenes = sceneTags.map(readAttrs)
+  const yakuText = scenes.map((s) => s.YakuText).find((v) => v && v.trim()) ?? ''
 
   type Entry = { bookChapter: string; verse: string; message: string }
   const entries: Entry[] = []
 
   scenes.forEach((scene) => {
-    const position = scene.getAttribute('PositionText') ?? ''
-    const message = scene.getAttribute('MainMessage') ?? ''
+    const position = scene.PositionText ?? ''
+    const message = scene.MainMessage ?? ''
     if (!position || !message) return
     const normalized = position.replace(/\s+/g, ' ').trim()
     const match = normalized.match(/^(.*?):\s*(\d+)\s*$/)
