@@ -1,10 +1,12 @@
-import type { FormEvent } from 'react'
+﻿import type { FormEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import JSZip from 'jszip'
 import dayjs from 'dayjs'
 import VerseList from '../components/VerseList'
 import { useAuth } from '../contexts/AuthContext'
 import { deleteVerse, fetchVerses, saveVerse } from '../lib/firestore'
 import type { Attachment, Verse } from '../lib/types'
+import { parseBdscPreview } from '../lib/bdsc'
 import { uploadAttachments } from '../lib/storage'
 import { formatWeekday, saveCache } from '../lib/utils'
 
@@ -22,6 +24,8 @@ export default function AdminDashboard() {
   const [verses, setVerses] = useState<Verse[]>([])
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
+  const [previewText, setPreviewText] = useState<string>('')
+  const [previewFileName, setPreviewFileName] = useState<string>('')
 
   useEffect(() => {
     const load = async () => {
@@ -39,9 +43,61 @@ export default function AdminDashboard() {
     load()
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    const buildPreview = async (targets: File[]) => {
+      if (!targets.length) {
+        if (!cancelled) {
+          setPreviewText('')
+          setPreviewFileName('')
+        }
+        return
+      }
+
+      const first = targets[0]
+      if (first.name.toLowerCase().endsWith('.bdsc')) {
+        const raw = await first.text()
+        const parsed = parseBdscPreview(raw)
+        if (!cancelled) {
+          setPreviewText(parsed)
+          setPreviewFileName(first.name)
+        }
+        return
+      }
+
+      if (first.name.toLowerCase().endsWith('.zip')) {
+        const zip = await JSZip.loadAsync(first)
+        const entries = Object.values(zip.files).filter((f) => !f.dir)
+        for (const entry of entries) {
+          if (!entry.name.toLowerCase().endsWith('.bdsc')) continue
+          const raw = await entry.async('string')
+          const parsed = parseBdscPreview(raw)
+          if (!cancelled) {
+            setPreviewText(parsed)
+            setPreviewFileName(entry.name)
+          }
+          return
+        }
+      }
+
+      if (!cancelled) {
+        setPreviewText('')
+        setPreviewFileName(first.name)
+      }
+    }
+
+    buildPreview(files)
+    return () => {
+      cancelled = true
+    }
+  }, [files])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!user) return
+    if (previewText && !window.confirm('上記の内容で保存しますか？')) {
+      return
+    }
     setMessage(null)
     setStatus('loading')
     try {
@@ -62,6 +118,8 @@ export default function AdminDashboard() {
       setMessage('保存しました（公開済み）')
       setFiles([])
       if (fileInputRef.current) fileInputRef.current.value = ''
+      setPreviewText('')
+      setPreviewFileName('')
       setForm(emptyForm())
       setStatus('idle')
     } catch (err) {
@@ -141,6 +199,21 @@ export default function AdminDashboard() {
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>
+        {previewFileName && (
+          <div className="card" style={{ background: '#f8fafc' }}>
+            <p className="muted small">プレビュー（保存前の確認）</p>
+            <p className="muted small">日付: {form.date}</p>
+            <p className="muted small">曜日: {formatWeekday(form.date)}</p>
+            <p className="muted small">メッセージタイトル: {form.reference}</p>
+            {form.comment && <p className="muted small">コメント: {form.comment}</p>}
+            <p className="muted small">ファイル名: {previewFileName}</p>
+            {previewText ? (
+              <pre className="attachment-preview">{previewText}</pre>
+            ) : (
+              <p className="muted small">プレビューが作成できませんでした</p>
+            )}
+          </div>
+        )}
         {message && <p className="muted">{message}</p>}
         <button type="submit" disabled={status === 'loading'}>
           保存＝公開
