@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+﻿import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { logout } from '../lib/auth'
@@ -17,9 +17,9 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="app">
       <header className="shell header">
         <div className="brand">
-          <span className="brand-mark">✶</span>
+          <span className="brand-mark">★</span>
           <div>
-            <p className="title">今日の聖書箇所 Ver.29</p>
+            <p className="title">今日の聖書箇所</p>
           </div>
         </div>
         <nav className="nav">
@@ -55,6 +55,18 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="shell">{children}</main>
+      <div
+        style={{
+          position: 'fixed',
+          right: '12px',
+          bottom: '10px',
+          fontSize: '12px',
+          color: '#94a3b8',
+          zIndex: 30,
+        }}
+      >
+        Ver.01
+      </div>
     </div>
   )
 }
