@@ -2,6 +2,7 @@
 import VerseCard from '../components/VerseCard'
 import { isFirebaseConfigured } from '../lib/firebase'
 import { fetchTodayOrLatest } from '../lib/firestore'
+import type { Verse } from '../lib/types'
 import { readCache, saveCache } from '../lib/utils'
 
 const CACHE_KEY = 'cached_today'
