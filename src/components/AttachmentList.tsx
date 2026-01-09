@@ -280,22 +280,33 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
             {hasPreview && (
               <>
                 <div className="attachment-meta">
-                  <span className="attachment-name">テキスト操作</span>
                   <div className="attachment-actions">
                     <button
                       type="button"
-                      className="chip"
+                      className="icon-button"
                       onClick={() => copyToClipboard(previewText)}
+                      aria-label="コピー"
+                      title="コピー"
                     >
-                      コピー
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 9a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V9z" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
                     </button>
                     {canShare && (
                       <button
                         type="button"
-                        className="chip"
+                        className="icon-button"
                         onClick={() => shareText(previewText)}
+                        aria-label="共有"
+                        title="共有"
                       >
-                        共有
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M16 8a3 3 0 1 0-2.83-4H13a3 3 0 0 0 0 6h.17A3 3 0 0 0 16 8z" />
+                          <path d="M6 14a3 3 0 1 0 2.83 4H9a3 3 0 0 0 0-6h-.17A3 3 0 0 0 6 14z" />
+                          <path d="M16 13a3 3 0 1 0 2.83 4H19a3 3 0 0 0 0-6h-.17A3 3 0 0 0 16 13z" />
+                          <path d="M8.59 13.51l6.82-3.02M8.59 16.49l6.82 3.02" />
+                        </svg>
                       </button>
                     )}
                   </div>

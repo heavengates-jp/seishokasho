@@ -2,28 +2,15 @@
 import VerseCard from '../components/VerseCard'
 import { isFirebaseConfigured } from '../lib/firebase'
 import { fetchTodayOrLatest } from '../lib/firestore'
-import type { Verse } from '../lib/types'
 import { readCache, saveCache } from '../lib/utils'
 
 const CACHE_KEY = 'cached_today'
-
-const getPreviewText = (verse: Verse | null) => {
-  if (!verse) return ''
-  const attachments =
-    verse.attachments && verse.attachments.length
-      ? verse.attachments
-      : verse.attachment
-        ? [verse.attachment]
-        : []
-  return attachments.map((a) => a.preview || '').find((text) => text.trim()) ?? ''
-}
 
 export default function Home() {
   const [verse, setVerse] = useState<Verse | null>(() =>
     readCache<Verse>(CACHE_KEY),
   )
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [copyMessage, setCopyMessage] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setStatus('loading')
@@ -50,33 +37,12 @@ export default function Home() {
     }
   }, [load])
 
-  const handleCopy = async () => {
-    const text = getPreviewText(verse)
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopyMessage('コピーしました')
-      setTimeout(() => setCopyMessage(null), 1500)
-    } catch (e) {
-      console.error(e)
-    }
-  }
-
   return (
     <div className="stack page">
       <div className="link-row">
         <button type="button" className="ghost" onClick={load}>
           更新
         </button>
-        <button
-          type="button"
-          className="ghost"
-          onClick={handleCopy}
-          disabled={!getPreviewText(verse)}
-        >
-          コピペ
-        </button>
-        {copyMessage && <span className="muted small">{copyMessage}</span>}
       </div>
       {status === 'loading' && !verse && <span className="pill">読み込み中</span>}
       {status === 'error' && (
