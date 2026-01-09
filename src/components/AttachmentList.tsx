@@ -157,6 +157,8 @@ const formatBdscPreview = (raw: string) => {
 
 export default function AttachmentList({ attachments }: { attachments?: Attachment[] }) {
   const [previews, setPreviews] = useState<PreviewState>({})
+  const canShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   const copyToClipboard = async (text: string) => {
     if (!text) return
@@ -170,7 +172,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
   const shareText = async (text: string) => {
     if (!text) return
     try {
-      if (navigator.share) {
+      if (canShare) {
         await navigator.share({ text })
       } else {
         await navigator.clipboard.writeText(text)
@@ -287,7 +289,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                     >
                       コピー
                     </button>
-                    {navigator.share && (
+                    {canShare && (
                       <button
                         type="button"
                         className="chip"
