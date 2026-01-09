@@ -341,9 +341,9 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #0f172a;
   color: #f8fafc;
   border: none;
@@ -352,8 +352,8 @@ p {
 }
 
 .icon-button svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;

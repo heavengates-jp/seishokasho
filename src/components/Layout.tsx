@@ -65,7 +65,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           zIndex: 30,
         }}
       >
-        Ver.01a
+        Ver.01b
       </div>
     </div>
   )
