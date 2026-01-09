@@ -182,6 +182,31 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleToggleHidden = async (id: string, hidden: boolean) => {
+    const target = verses.find((v) => v.id === id)
+    if (!target) return
+    try {
+      await updateVerse(id, {
+        date: target.date,
+        reference: target.reference,
+        comment: target.comment ?? '',
+        hidden,
+        attachments:
+          target.attachments && target.attachments.length
+            ? target.attachments
+            : target.attachment
+              ? [target.attachment]
+              : [],
+      })
+      const updated = verses.map((v) => (v.id === id ? { ...v, hidden } : v))
+      setVerses(updated)
+      saveCache('cached_history', updated)
+    } catch (err) {
+      console.error(err)
+      alert('表示設定の更新に失敗しました')
+    }
+  }
+
   return (
     <div className="stack page">
       <div className="page-head">
@@ -286,6 +311,7 @@ export default function AdminDashboard() {
         <VerseList
           verses={verses}
           onDelete={handleDelete}
+          onToggleHidden={handleToggleHidden}
           onEdit={(id) => {
             const target = verses.find((v) => v.id === id)
             if (!target) return
