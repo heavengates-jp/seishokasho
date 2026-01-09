@@ -302,10 +302,9 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
                         title="共有"
                       >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M16 8a3 3 0 1 0-2.83-4H13a3 3 0 0 0 0 6h.17A3 3 0 0 0 16 8z" />
-                          <path d="M6 14a3 3 0 1 0 2.83 4H9a3 3 0 0 0 0-6h-.17A3 3 0 0 0 6 14z" />
-                          <path d="M16 13a3 3 0 1 0 2.83 4H19a3 3 0 0 0 0-6h-.17A3 3 0 0 0 16 13z" />
-                          <path d="M8.59 13.51l6.82-3.02M8.59 16.49l6.82 3.02" />
+                          <path d="M12 3v10" />
+                          <path d="M8 7l4-4 4 4" />
+                          <path d="M6 11v7a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-7" />
                         </svg>
                       </button>
                     )}

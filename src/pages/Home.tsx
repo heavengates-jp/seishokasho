@@ -6,11 +6,17 @@ import type { Verse } from '../lib/types'
 import { readCache, saveCache } from '../lib/utils'
 
 const CACHE_KEY = 'cached_today'
+const HISTORY_CACHE_KEY = 'cached_history'
+
+const getFallbackVerse = () => {
+  const history = readCache<Verse[]>(HISTORY_CACHE_KEY) ?? []
+  return history[0] ?? null
+}
 
 export default function Home() {
-  const [verse, setVerse] = useState<Verse | null>(() =>
-    readCache<Verse>(CACHE_KEY),
-  )
+  const [verse, setVerse] = useState<Verse | null>(() => {
+    return readCache<Verse>(CACHE_KEY) ?? getFallbackVerse()
+  })
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
 
   const load = useCallback(async () => {
@@ -22,9 +28,13 @@ export default function Home() {
       setStatus('idle')
     } catch (e) {
       console.error(e)
+      if (!verse) {
+        const fallback = getFallbackVerse()
+        setVerse(fallback)
+      }
       setStatus('error')
     }
-  }, [])
+  }, [verse])
 
   useEffect(() => {
     let alive = true

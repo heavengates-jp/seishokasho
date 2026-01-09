@@ -39,8 +39,17 @@ export default function History() {
       .filter((v) => {
         const inStart = filter.start ? v.date >= filter.start : true
         const inEnd = filter.end ? v.date <= filter.end : true
+        const attachments =
+          v.attachments && v.attachments.length
+            ? v.attachments
+            : v.attachment
+              ? [v.attachment]
+              : []
+        const attachmentText = attachments
+          .map((a) => a.preview || '')
+          .join(' ')
         const matchesQuery = query
-          ? [v.reference, v.comment]
+          ? [v.reference, v.comment, attachmentText]
               .filter(Boolean)
               .some((field) => field!.toLowerCase().includes(query.toLowerCase()))
           : true
