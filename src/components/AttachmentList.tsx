@@ -279,7 +279,7 @@ export default function AttachmentList({ attachments }: { attachments?: Attachme
             )}
             {hasPreview && (
               <>
-                <div className="attachment-meta">
+                <div className="attachment-meta attachment-meta-actions">
                   <div className="attachment-actions">
                     <button
                       type="button"

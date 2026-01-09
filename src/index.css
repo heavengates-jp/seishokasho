@@ -330,6 +330,10 @@ p {
   flex-wrap: wrap;
 }
 
+.attachment-meta-actions {
+  justify-content: flex-end;
+}
+
 .attachment-actions {
   display: flex;
   gap: 0.4rem;
