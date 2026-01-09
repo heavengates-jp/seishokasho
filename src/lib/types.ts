@@ -5,6 +5,7 @@ export type Attachment = {
   type: AttachmentType
   name?: string
   preview?: string
+  path?: string
 }
 
 export type Verse = {
@@ -13,6 +14,7 @@ export type Verse = {
   weekday: string
   reference: string
   comment?: string
+  hidden?: boolean
   attachment?: Attachment | null
   attachments?: Attachment[]
   createdAt?: number

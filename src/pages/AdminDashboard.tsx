@@ -4,16 +4,17 @@ import JSZip from 'jszip'
 import dayjs from 'dayjs'
 import VerseList from '../components/VerseList'
 import { useAuth } from '../contexts/AuthContext'
-import { deleteVerse, fetchVerses, saveVerse } from '../lib/firestore'
+import { deleteVerse, fetchVerses, saveVerse, updateVerse } from '../lib/firestore'
 import type { Attachment, Verse } from '../lib/types'
 import { parseBdscPreview } from '../lib/bdsc'
-import { uploadAttachments } from '../lib/storage'
+import { deleteAttachments, uploadAttachments } from '../lib/storage'
 import { formatWeekday, saveCache } from '../lib/utils'
 
 const emptyForm = () => ({
   date: dayjs().format('YYYY-MM-DD'),
   reference: '',
   comment: '',
+  hidden: false,
 })
 
 export default function AdminDashboard() {
@@ -26,6 +27,9 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState<string | null>(null)
   const [previewText, setPreviewText] = useState<string>('')
   const [previewFileName, setPreviewFileName] = useState<string>('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([])
+  const [replaceAttachments, setReplaceAttachments] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -102,20 +106,45 @@ export default function AdminDashboard() {
     setStatus('loading')
     try {
       let attachments: Attachment[] = []
-      if (files.length) {
-        attachments = await uploadAttachments(files)
-      }
+      let clearExisting = false
 
-      await saveVerse({
-        date: form.date,
-        reference: form.reference,
-        comment: form.comment,
-        attachments,
-      })
+      if (editingId) {
+        clearExisting = replaceAttachments || files.length > 0
+        if (clearExisting && existingAttachments.length) {
+          await deleteAttachments(existingAttachments)
+        }
+        if (files.length) {
+          attachments = await uploadAttachments(files)
+        } else {
+          attachments = clearExisting ? [] : existingAttachments
+        }
+
+        await updateVerse(editingId, {
+          date: form.date,
+          reference: form.reference,
+          comment: form.comment,
+          hidden: form.hidden,
+          attachments,
+        })
+      } else {
+        if (files.length) {
+          attachments = await uploadAttachments(files)
+        }
+        await saveVerse({
+          date: form.date,
+          reference: form.reference,
+          comment: form.comment,
+          hidden: form.hidden,
+          attachments,
+        })
+      }
       const updated = await fetchVerses()
       setVerses(updated)
       saveCache('cached_history', updated)
       setMessage('保存しました（公開済み）')
+      setEditingId(null)
+      setExistingAttachments([])
+      setReplaceAttachments(false)
       setFiles([])
       if (fileInputRef.current) fileInputRef.current.value = ''
       setPreviewText('')
@@ -134,6 +163,15 @@ export default function AdminDashboard() {
     const label = target ? `${target.date} ${target.reference}` : id
     if (!window.confirm(`${label} を削除しますか？`)) return
     try {
+      const attachments =
+        target?.attachments && target.attachments.length
+          ? target.attachments
+          : target?.attachment
+            ? [target.attachment]
+            : []
+      if (attachments.length) {
+        await deleteAttachments(attachments)
+      }
       await deleteVerse(id)
       const updated = verses.filter((v) => v.id !== id)
       setVerses(updated)
@@ -192,6 +230,14 @@ export default function AdminDashboard() {
           />
         </label>
         <label>
+          <input
+            type="checkbox"
+            checked={form.hidden}
+            onChange={(e) => setForm({ ...form, hidden: e.target.checked })}
+          />
+          非表示にする（公開ページに出しません）
+        </label>
+        <label>
           添付資料（PDF/画像/テキスト/ZIP可・複数選択可）
           <input
             type="file"
@@ -201,6 +247,16 @@ export default function AdminDashboard() {
             onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
           />
         </label>
+        {editingId && existingAttachments.length > 0 && (
+          <label>
+            <input
+              type="checkbox"
+              checked={replaceAttachments}
+              onChange={(e) => setReplaceAttachments(e.target.checked)}
+            />
+            添付を差し替える（既存の添付を削除）
+          </label>
+        )}
         {previewFileName && (
           <div className="card" style={{ background: '#f8fafc' }}>
             <p className="muted small">プレビュー（保存前の確認）</p>
@@ -218,7 +274,7 @@ export default function AdminDashboard() {
         )}
         {message && <p className="muted">{message}</p>}
         <button type="submit" disabled={status === 'loading'}>
-          保存＝公開
+          {editingId ? '更新' : '保存＝公開'}
         </button>
       </form>
 
@@ -227,7 +283,34 @@ export default function AdminDashboard() {
           <h2>履歴一覧</h2>
           <p className="muted small">管理者のみ削除可能</p>
         </div>
-        <VerseList verses={verses} onDelete={handleDelete} />
+        <VerseList
+          verses={verses}
+          onDelete={handleDelete}
+          onEdit={(id) => {
+            const target = verses.find((v) => v.id === id)
+            if (!target) return
+            setEditingId(id)
+            setForm({
+              date: target.date,
+              reference: target.reference,
+              comment: target.comment ?? '',
+              hidden: target.hidden ?? false,
+            })
+            const attachments =
+              target.attachments && target.attachments.length
+                ? target.attachments
+                : target.attachment
+                  ? [target.attachment]
+                  : []
+            setExistingAttachments(attachments)
+            setReplaceAttachments(false)
+            setFiles([])
+            if (fileInputRef.current) fileInputRef.current.value = ''
+            setPreviewText('')
+            setPreviewFileName('')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
       </section>
     </div>
   )

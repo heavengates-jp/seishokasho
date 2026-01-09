@@ -5,13 +5,12 @@ import App from './App.tsx'
 
 function AppWithSW() {
   useEffect(() => {
-    const enableSW = import.meta.env.VITE_ENABLE_SW === 'true'
     const redirect = sessionStorage.getItem('redirect')
     if (redirect) {
       window.history.replaceState(null, '', redirect)
       sessionStorage.removeItem('redirect')
     }
-    if (enableSW && 'serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register(`${import.meta.env.BASE_URL}service-worker.js`)

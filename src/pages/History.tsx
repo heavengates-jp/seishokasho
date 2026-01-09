@@ -33,16 +33,19 @@ export default function History() {
   }, [])
 
   const filtered = useMemo(() => {
-    return verses.filter((v) => {
-      const inStart = filter.start ? v.date >= filter.start : true
-      const inEnd = filter.end ? v.date <= filter.end : true
-      const matchesQuery = filter.query
-        ? [v.reference, v.comment].some((field) =>
-            field?.toLowerCase().includes(filter.query.toLowerCase()),
-          )
-        : true
-      return inStart && inEnd && matchesQuery
-    })
+    const query = filter.query.trim()
+    return verses
+      .filter((v) => !v.hidden)
+      .filter((v) => {
+        const inStart = filter.start ? v.date >= filter.start : true
+        const inEnd = filter.end ? v.date <= filter.end : true
+        const matchesQuery = query
+          ? [v.reference, v.comment]
+              .filter(Boolean)
+              .some((field) => field!.toLowerCase().includes(query.toLowerCase()))
+          : true
+        return inStart && inEnd && matchesQuery
+      })
   }, [filter.end, filter.query, filter.start, verses])
 
   return (

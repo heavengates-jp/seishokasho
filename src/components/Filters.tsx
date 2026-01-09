@@ -1,4 +1,4 @@
-export type HistoryFilter = {
+﻿export type HistoryFilter = {
   start: string
   end: string
   query: string
@@ -30,7 +30,7 @@ export default function Filters({
         />
       </label>
       <label className="full">
-        書名/語句
+        聖書/語句
         <input
           type="search"
           placeholder="例: ヨハネ"

@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from './firebase'
 import type { Attachment, Verse } from './types'
@@ -41,6 +42,7 @@ const mapDoc = (id: string, data: Record<string, unknown>): Verse => {
     weekday: (data.weekday as string) ?? formatWeekday(date),
     reference: (data.reference as string) ?? '',
     comment: (data.comment as string) ?? '',
+    hidden: (data.hidden as boolean) ?? false,
     attachment,
     attachments: mergedAttachments,
     createdAt: toMillis(data.createdAt),
@@ -53,7 +55,7 @@ export async function fetchTodayOrLatest(): Promise<Verse | null> {
     throw new Error('Firebase config missing')
   }
   const todayId = dayjs().format('YYYY-MM-DD')
-  const verses = await fetchVerses()
+  const verses = (await fetchVerses()).filter((v) => !v.hidden)
   const today = verses.find((v) => v.date === todayId)
   return today ?? verses[0] ?? null
 }
@@ -97,12 +99,35 @@ export async function saveVerse(
     weekday,
     reference: verse.reference,
     comment: verse.comment ?? '',
+    hidden: verse.hidden ?? false,
     attachment: verse.attachment ?? null,
     attachments: verse.attachments ?? (verse.attachment ? [verse.attachment] : []),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
   await addDoc(versesRef, payload)
+}
+
+export async function updateVerse(
+  id: string,
+  verse: Omit<Verse, 'id' | 'weekday' | 'createdAt' | 'updatedAt'> & {
+    attachment?: Attachment | null
+    attachments?: Attachment[]
+  },
+) {
+  const weekday = formatWeekday(verse.date)
+  const ref = doc(versesRef, id)
+  const payload: Record<string, unknown> = {
+    date: verse.date,
+    weekday,
+    reference: verse.reference,
+    comment: verse.comment ?? '',
+    hidden: verse.hidden ?? false,
+    attachment: verse.attachment ?? null,
+    attachments: verse.attachments ?? (verse.attachment ? [verse.attachment] : []),
+    updatedAt: serverTimestamp(),
+  }
+  await setDoc(ref, payload, { merge: true })
 }
 
 export const deleteVerse = (id: string) => deleteDoc(doc(versesRef, id))
