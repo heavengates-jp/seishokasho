@@ -1,10 +1,8 @@
-﻿const CACHE_NAME = 'seishokasho-cache-v1'
+﻿const CACHE_NAME = 'seishokasho-cache-v2'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([self.registration.scope])),
-  )
+  event.waitUntil(caches.open(CACHE_NAME))
 })
 
 self.addEventListener('activate', (event) => {
@@ -20,6 +18,23 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return
 
+  const isHtml =
+    request.mode === 'navigate' ||
+    request.headers.get('accept')?.includes('text/html')
+
+  if (isHtml) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          return response
+        })
+        .catch(() => caches.match(request)),
+    )
+    return
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached
@@ -29,7 +44,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
           return response
         })
-        .catch(() => caches.match(self.registration.scope))
+        .catch(() => cached)
     }),
   )
 })
